@@ -24,7 +24,7 @@
         <s class="price__compare" data-compare-price{% unless current_variant.compare_at_price > current_variant.price %} hidden{% endunless %}>{{ current_variant.compare_at_price | money }}</s>
       </div>
 
-      {%- form 'product', product, class: 'product__form' -%}
+      {%- form 'product', product, class: 'product__form', id: 'product-form' -%}
         {%- unless product.has_only_default_variant -%}
           <label for="variant-{{ section.id }}">{{ product.options | join: ' / ' }}</label>
           <select id="variant-{{ section.id }}" name="id" data-variant-select>
@@ -33,6 +33,7 @@
                 data-price="{{ variant.price | money }}"
                 data-compare="{% if variant.compare_at_price > variant.price %}{{ variant.compare_at_price | money }}{% endif %}"
                 data-available="{{ variant.available }}"
+                data-stock="{% if variant.inventory_management == 'shopify' %}{{ variant.inventory_quantity }}{% endif %}"
                 {% if variant == current_variant %}selected{% endif %}
                 {% unless variant.available %}disabled{% endunless %}>
                 {{ variant.title }}{% unless variant.available %} – Sold out{% endunless %}
@@ -53,7 +54,19 @@
             {%- if current_variant.available -%}Add to cart{%- else -%}Sold out{%- endif -%}
           </button>
         </div>
+        {%- assign stock = current_variant.inventory_quantity -%}
+        <p class="stock" data-stock-msg{% unless current_variant.inventory_management == 'shopify' and stock > 0 and stock <= 10 %} hidden{% endunless %}>
+          &#9679; Only <span data-stock-count>{{ stock }}</span> left in stock &ndash; order soon
+        </p>
       {%- endform -%}
+
+      {%- assign free_ship = settings.free_shipping_threshold | times: 100 -%}
+      <ul class="perks">
+        {%- if free_ship > 0 -%}<li>Free shipping over {{ free_ship | money_without_trailing_zeros }}</li>{%- endif -%}
+        <li>30-day money-back guarantee</li>
+        <li>Third-party lab tested</li>
+        <li>Secure checkout</li>
+      </ul>
 
       <div class="rte product__desc">{{ product.description }}</div>
 
@@ -68,6 +81,16 @@
         <div class="rte"><p>Orders ship within 24 hours. 30-day money-back guarantee on your first purchase.</p></div>
       </details>
     </div>
+  </div>
+
+  <div class="sticky-atc" data-sticky-atc aria-hidden="true">
+    <div class="sticky-atc__info">
+      <strong>{{ product.title }}</strong>
+      <span class="price__current" data-sticky-price>{{ current_variant.price | money }}</span>
+    </div>
+    <button class="btn" type="submit" form="product-form" data-sticky-add tabindex="-1" {% unless current_variant.available %}disabled{% endunless %}>
+      {%- if current_variant.available -%}Add to cart{%- else -%}Sold out{%- endif -%}
+    </button>
   </div>
 </section>
 

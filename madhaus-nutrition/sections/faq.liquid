@@ -1,0 +1,45 @@
+<section class="section">
+  <div class="container container--narrow">
+    <h2 class="center">{{ section.settings.heading }}</h2>
+    {%- for block in section.blocks -%}
+      <details class="accordion" {{ block.shopify_attributes }}>
+        <summary>{{ block.settings.question }}</summary>
+        <div class="rte">{{ block.settings.answer }}</div>
+      </details>
+    {%- endfor -%}
+    {%- if section.settings.show_contact -%}
+      <p class="center muted faq__more">Still have questions? <a class="link-arrow" href="{{ routes.root_url }}pages/contact">Contact us</a></p>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "FAQ",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "default": "QUESTIONS? ANSWERED." },
+    { "type": "checkbox", "id": "show_contact", "label": "Show contact link", "default": true }
+  ],
+  "blocks": [
+    {
+      "type": "item",
+      "name": "Question",
+      "settings": [
+        { "type": "text", "id": "question", "label": "Question", "default": "How fast will my order ship?" },
+        { "type": "richtext", "id": "answer", "label": "Answer", "default": "<p>Orders ship within 24 hours (business days).</p>" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "FAQ",
+      "blocks": [
+        { "type": "item", "settings": { "question": "How fast will my order ship?", "answer": "<p>Orders ship within 24 hours on business days. You'll get a tracking email as soon as it's on the way.</p>" } },
+        { "type": "item", "settings": { "question": "Are your products third-party tested?", "answer": "<p>Yes. Every batch is tested for purity and potency.</p>" } },
+        { "type": "item", "settings": { "question": "What if I don't like it?", "answer": "<p>Try it risk-free with our 30-day money-back guarantee on your first purchase.</p>" } },
+        { "type": "item", "settings": { "question": "How should I take it?", "answer": "<p>Directions are on every label and product page. Check with your doctor if you're pregnant, nursing or on medication.</p>" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

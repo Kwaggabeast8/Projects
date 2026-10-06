@@ -1,29 +1,265 @@
 {
   "sections": {
-    "hero": { "type": "hero", "settings": {} },
+    "hero": {
+      "type": "hero",
+      "settings": {}
+    },
+    "trust": {
+      "type": "trust-bar",
+      "blocks": {
+        "b0": {
+          "type": "item",
+          "settings": {
+            "title": "FREE SHIPPING",
+            "text": "On orders over $75"
+          }
+        },
+        "b1": {
+          "type": "item",
+          "settings": {
+            "title": "LAB TESTED",
+            "text": "Every batch"
+          }
+        },
+        "b2": {
+          "type": "item",
+          "settings": {
+            "title": "30-DAY GUARANTEE",
+            "text": "Love it or we fix it"
+          }
+        },
+        "b3": {
+          "type": "item",
+          "settings": {
+            "title": "SECURE CHECKOUT",
+            "text": "Shop Pay, Apple Pay, cards"
+          }
+        }
+      },
+      "block_order": [
+        "b0",
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "settings": {}
+    },
     "marquee": {
       "type": "marquee",
       "blocks": {
-        "a": { "type": "text", "settings": { "text": "NO FILLERS" } },
-        "b": { "type": "text", "settings": { "text": "NO EXCUSES" } },
-        "c": { "type": "text", "settings": { "text": "LAB TESTED" } },
-        "d": { "type": "text", "settings": { "text": "MADE FOR THE GRIND" } }
+        "b0": {
+          "type": "text",
+          "settings": {
+            "text": "NO FILLERS"
+          }
+        },
+        "b1": {
+          "type": "text",
+          "settings": {
+            "text": "NO EXCUSES"
+          }
+        },
+        "b2": {
+          "type": "text",
+          "settings": {
+            "text": "LAB TESTED"
+          }
+        },
+        "b3": {
+          "type": "text",
+          "settings": {
+            "text": "MADE FOR THE GRIND"
+          }
+        }
       },
-      "block_order": ["a", "b", "c", "d"]
+      "block_order": [
+        "b0",
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "settings": {}
     },
-    "best-sellers": { "type": "featured-collection", "settings": { "title": "BEST SELLERS", "limit": 4 } },
-    "story": { "type": "image-with-text", "settings": {} },
+    "best-sellers": {
+      "type": "featured-collection",
+      "settings": {
+        "title": "BEST SELLERS",
+        "limit": 4
+      }
+    },
+    "goals": {
+      "type": "collection-list",
+      "blocks": {
+        "b0": {
+          "type": "tile",
+          "settings": {
+            "label": "BUILD MUSCLE"
+          }
+        },
+        "b1": {
+          "type": "tile",
+          "settings": {
+            "label": "ENERGY & FOCUS"
+          }
+        },
+        "b2": {
+          "type": "tile",
+          "settings": {
+            "label": "RECOVERY"
+          }
+        },
+        "b3": {
+          "type": "tile",
+          "settings": {
+            "label": "STACKS & BUNDLES"
+          }
+        }
+      },
+      "block_order": [
+        "b0",
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "settings": {}
+    },
+    "story": {
+      "type": "image-with-text",
+      "settings": {}
+    },
+    "reviews": {
+      "type": "testimonials",
+      "blocks": {
+        "b0": {
+          "type": "review",
+          "settings": {
+            "rating": 5,
+            "quote": "Best pre-workout I've tried. Clean energy, no crash.",
+            "name": "Customer name",
+            "verified": true
+          }
+        },
+        "b1": {
+          "type": "review",
+          "settings": {
+            "rating": 5,
+            "quote": "Mixes perfectly and tastes insane. Reordered twice already.",
+            "name": "Customer name",
+            "verified": true
+          }
+        },
+        "b2": {
+          "type": "review",
+          "settings": {
+            "rating": 5,
+            "quote": "Finally a brand with honest labels. Full doses, no gimmicks.",
+            "name": "Customer name",
+            "verified": true
+          }
+        }
+      },
+      "block_order": [
+        "b0",
+        "b1",
+        "b2"
+      ],
+      "settings": {}
+    },
     "benefits": {
       "type": "benefits",
       "blocks": {
-        "a": { "type": "benefit", "settings": { "title": "CLEAN FORMULAS", "text": "Full-dose ingredients. No proprietary blends, no fillers." } },
-        "b": { "type": "benefit", "settings": { "title": "LAB TESTED", "text": "Every batch is third-party tested for purity and potency." } },
-        "c": { "type": "benefit", "settings": { "title": "FAST SHIPPING", "text": "Orders ship within 24 hours so you never run out." } },
-        "d": { "type": "benefit", "settings": { "title": "30-DAY GUARANTEE", "text": "Don't love it? We'll make it right." } }
+        "b0": {
+          "type": "benefit",
+          "settings": {
+            "title": "CLEAN FORMULAS",
+            "text": "Full-dose ingredients. No proprietary blends, no fillers."
+          }
+        },
+        "b1": {
+          "type": "benefit",
+          "settings": {
+            "title": "LAB TESTED",
+            "text": "Every batch is third-party tested for purity and potency."
+          }
+        },
+        "b2": {
+          "type": "benefit",
+          "settings": {
+            "title": "FAST SHIPPING",
+            "text": "Orders ship within 24 hours so you never run out."
+          }
+        },
+        "b3": {
+          "type": "benefit",
+          "settings": {
+            "title": "30-DAY GUARANTEE",
+            "text": "Don't love it? We'll make it right."
+          }
+        }
       },
-      "block_order": ["a", "b", "c", "d"]
+      "block_order": [
+        "b0",
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "settings": {}
     },
-    "newsletter": { "type": "newsletter", "settings": {} }
+    "faq": {
+      "type": "faq",
+      "blocks": {
+        "b0": {
+          "type": "item",
+          "settings": {
+            "question": "How fast will my order ship?",
+            "answer": "<p>Orders ship within 24 hours on business days. You'll get a tracking email as soon as it's on the way.</p>"
+          }
+        },
+        "b1": {
+          "type": "item",
+          "settings": {
+            "question": "Are your products third-party tested?",
+            "answer": "<p>Yes. Every batch is tested for purity and potency.</p>"
+          }
+        },
+        "b2": {
+          "type": "item",
+          "settings": {
+            "question": "What if I don't like it?",
+            "answer": "<p>Try it risk-free with our 30-day money-back guarantee on your first purchase.</p>"
+          }
+        },
+        "b3": {
+          "type": "item",
+          "settings": {
+            "question": "How should I take it?",
+            "answer": "<p>Directions are on every label and product page. Check with your doctor if you're pregnant, nursing or on medication.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "b0",
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "settings": {}
+    },
+    "newsletter": {
+      "type": "newsletter",
+      "settings": {}
+    }
   },
-  "order": ["hero", "marquee", "best-sellers", "story", "benefits", "newsletter"]
+  "order": [
+    "hero",
+    "trust",
+    "marquee",
+    "best-sellers",
+    "goals",
+    "story",
+    "reviews",
+    "benefits",
+    "faq",
+    "newsletter"
+  ]
 }

@@ -22,6 +22,15 @@ Custom Online Store 2.0 theme. Black base, red accents/buttons, neon green-yello
 - Optional product metafield `custom.supplement_facts` (rich text / file) shows a "Supplement facts" accordion on product pages.
 - Add real policies (shipping, refund, privacy) and review the FDA disclaimer in the footer for your products and region.
 
+## Conversion features
+
+- **Contact page:** create a page in Shopify (Online Store → Pages → Add page), name it "Contact", set its template to `page.contact`. Messages go to your store email. Link to it from your menus.
+- **FAQ page:** same idea, template `page.faq`.
+- Homepage: trust bar, shop-by-goal tiles, customer reviews, FAQ, newsletter signup.
+- Product page: low-stock alert, perks list, sticky mobile add-to-cart bar, "Stack it with" recommendations, reviews and FAQ.
+- Cart: free-shipping progress bar (set the amount in Theme settings → Conversion) and order note.
+- The sample reviews are placeholders. Replace them with real customer reviews (fake reviews are illegal in many regions).
+
 ## Structure
 
 - `layout/theme.liquid` – page shell, loads colours from settings

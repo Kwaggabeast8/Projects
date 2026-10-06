@@ -26,6 +26,12 @@
     ]
   },
   {
+    "name": "Conversion",
+    "settings": [
+      { "type": "number", "id": "free_shipping_threshold", "label": "Free shipping threshold (store currency, 0 = off)", "info": "Powers the free shipping progress bar in the cart and the perks list on product pages. Set up the matching free shipping rate in Shopify Settings → Shipping.", "default": 75 }
+    ]
+  },
+  {
     "name": "Social media",
     "settings": [
       { "type": "url", "id": "social_instagram", "label": "Instagram" },

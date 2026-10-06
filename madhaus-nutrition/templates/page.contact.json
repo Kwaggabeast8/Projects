@@ -1,49 +1,7 @@
 {
   "sections": {
     "main": {
-      "type": "main-product",
-      "settings": {}
-    },
-    "reviews": {
-      "type": "testimonials",
-      "blocks": {
-        "b0": {
-          "type": "review",
-          "settings": {
-            "rating": 5,
-            "quote": "Best pre-workout I've tried. Clean energy, no crash.",
-            "name": "Customer name",
-            "verified": true
-          }
-        },
-        "b1": {
-          "type": "review",
-          "settings": {
-            "rating": 5,
-            "quote": "Mixes perfectly and tastes insane. Reordered twice already.",
-            "name": "Customer name",
-            "verified": true
-          }
-        },
-        "b2": {
-          "type": "review",
-          "settings": {
-            "rating": 5,
-            "quote": "Finally a brand with honest labels. Full doses, no gimmicks.",
-            "name": "Customer name",
-            "verified": true
-          }
-        }
-      },
-      "block_order": [
-        "b0",
-        "b1",
-        "b2"
-      ],
-      "settings": {}
-    },
-    "recs": {
-      "type": "product-recommendations",
+      "type": "main-contact",
       "settings": {}
     },
     "faq": {
@@ -89,8 +47,6 @@
   },
   "order": [
     "main",
-    "reviews",
-    "recs",
     "faq"
   ]
 }

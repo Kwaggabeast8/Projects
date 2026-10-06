@@ -1,0 +1,16 @@
+{%- comment -%} Usage: {% render 'product-card', product: product %} {%- endcomment -%}
+<article class="card">
+  <a class="card__media" href="{{ product.url }}">
+    {%- if product.featured_media -%}
+      {{ product.featured_media | image_url: width: 600 | image_tag: loading: 'lazy', widths: '300, 450, 600', sizes: '(min-width: 900px) 25vw, 50vw', alt: product.featured_media.alt }}
+    {%- else -%}
+      <div class="card__placeholder">MADHAUS</div>
+    {%- endif -%}
+    {%- if product.compare_at_price > product.price -%}<span class="badge">SALE</span>{%- endif -%}
+    {%- unless product.available -%}<span class="badge badge--out">SOLD OUT</span>{%- endunless -%}
+  </a>
+  <div class="card__body">
+    <h3 class="card__title"><a href="{{ product.url }}">{{ product.title }}</a></h3>
+    {% render 'price', product: product %}
+  </div>
+</article>

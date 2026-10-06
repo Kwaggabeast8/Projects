@@ -1,0 +1,25 @@
+<section class="section section--accent">
+  <div class="container newsletter">
+    <h2>{{ section.settings.heading }}</h2>
+    <p>{{ section.settings.text }}</p>
+    {%- form 'customer', class: 'newsletter__form' -%}
+      <input type="hidden" name="contact[tags]" value="newsletter">
+      <label class="visually-hidden" for="nl-email-{{ section.id }}">Email</label>
+      <input id="nl-email-{{ section.id }}" type="email" name="contact[email]" placeholder="Your email" required autocomplete="email">
+      <button class="btn btn--dark" type="submit">Sign up</button>
+      {%- if form.posted_successfully? -%}<p class="newsletter__msg">You're in. Welcome to the Madhaus.</p>{%- endif -%}
+      {%- if form.errors -%}<p class="newsletter__msg">{{ form.errors | default_errors }}</p>{%- endif -%}
+    {%- endform -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Newsletter",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "default": "JOIN THE MADHAUS" },
+    { "type": "textarea", "id": "text", "label": "Text", "default": "Get 10% off your first order plus early access to new drops." }
+  ],
+  "presets": [{ "name": "Newsletter" }]
+}
+{% endschema %}

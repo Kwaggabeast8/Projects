@@ -1,0 +1,38 @@
+<section class="section section--surface">
+  <div class="container benefits">
+    {%- for block in section.blocks -%}
+      <div class="benefit" {{ block.shopify_attributes }}>
+        <h3>{{ block.settings.title }}</h3>
+        <p>{{ block.settings.text }}</p>
+      </div>
+    {%- endfor -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Benefits",
+  "max_blocks": 4,
+  "blocks": [
+    {
+      "type": "benefit",
+      "name": "Benefit",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title", "default": "Clean formulas" },
+        { "type": "textarea", "id": "text", "label": "Text", "default": "Full-dose ingredients, nothing hidden in proprietary blends." }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Benefits",
+      "blocks": [
+        { "type": "benefit", "settings": { "title": "CLEAN FORMULAS", "text": "Full-dose ingredients. No proprietary blends, no fillers." } },
+        { "type": "benefit", "settings": { "title": "LAB TESTED", "text": "Every batch is third-party tested for purity and potency." } },
+        { "type": "benefit", "settings": { "title": "FAST SHIPPING", "text": "Orders ship within 24 hours so you never run out." } },
+        { "type": "benefit", "settings": { "title": "30-DAY GUARANTEE", "text": "Don't love it? We'll make it right." } }
+      ]
+    }
+  ]
+}
+{% endschema %}

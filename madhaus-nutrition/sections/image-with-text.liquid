@@ -1,0 +1,35 @@
+<section class="section">
+  <div class="container split{% if section.settings.reverse %} split--reverse{% endif %}">
+    <div class="split__media">
+      {%- if section.settings.image != blank -%}
+        {{ section.settings.image | image_url: width: 1000 | image_tag: loading: 'lazy', widths: '500, 800, 1000', sizes: '(min-width: 900px) 50vw, 100vw' }}
+      {%- else -%}
+        <div class="card__placeholder">MADHAUS</div>
+      {%- endif -%}
+    </div>
+    <div class="split__text">
+      {%- if section.settings.eyebrow != blank -%}<p class="eyebrow">{{ section.settings.eyebrow }}</p>{%- endif -%}
+      <h2>{{ section.settings.heading }}</h2>
+      <div class="rte">{{ section.settings.text }}</div>
+      {%- if section.settings.button_label != blank -%}
+        <a class="btn" href="{{ section.settings.button_link | default: '#' }}">{{ section.settings.button_label }}</a>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Image with text",
+  "settings": [
+    { "type": "image_picker", "id": "image", "label": "Image" },
+    { "type": "checkbox", "id": "reverse", "label": "Image on the right", "default": false },
+    { "type": "text", "id": "eyebrow", "label": "Small text", "default": "THE MADHAUS WAY" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "BUILT FOR THE GRIND" },
+    { "type": "richtext", "id": "text", "label": "Text", "default": "<p>Madhaus Nutrition was founded on one idea: supplements should work and the label should be honest. Every formula is dosed to perform.</p>" },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "Our story" },
+    { "type": "url", "id": "button_link", "label": "Button link" }
+  ],
+  "presets": [{ "name": "Image with text" }]
+}
+{% endschema %}

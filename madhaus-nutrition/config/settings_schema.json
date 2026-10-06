@@ -1,0 +1,37 @@
+[
+  {
+    "name": "theme_info",
+    "theme_name": "Madhaus Nutrition",
+    "theme_version": "1.0.0",
+    "theme_author": "Madhaus Nutrition",
+    "theme_documentation_url": "https://help.shopify.com/",
+    "theme_support_url": "https://help.shopify.com/"
+  },
+  {
+    "name": "Brand colours",
+    "settings": [
+      { "type": "color", "id": "color_bg", "label": "Background (black)", "default": "#0a0a0a" },
+      { "type": "color", "id": "color_surface", "label": "Cards / panels", "default": "#151515" },
+      { "type": "color", "id": "color_text", "label": "Text", "default": "#f5f5f5" },
+      { "type": "color", "id": "color_accent", "label": "Accent (red)", "default": "#e10600" },
+      { "type": "color", "id": "color_price", "label": "Price (neon green-yellow)", "default": "#c8ff00" }
+    ]
+  },
+  {
+    "name": "Logo & favicon",
+    "settings": [
+      { "type": "image_picker", "id": "logo", "label": "Logo image (optional – text logo is used if empty)" },
+      { "type": "range", "id": "logo_width", "min": 60, "max": 260, "step": 10, "unit": "px", "label": "Logo width", "default": 140 },
+      { "type": "image_picker", "id": "favicon", "label": "Favicon (32x32 png)" }
+    ]
+  },
+  {
+    "name": "Social media",
+    "settings": [
+      { "type": "url", "id": "social_instagram", "label": "Instagram" },
+      { "type": "url", "id": "social_tiktok", "label": "TikTok" },
+      { "type": "url", "id": "social_youtube", "label": "YouTube" },
+      { "type": "url", "id": "social_facebook", "label": "Facebook" }
+    ]
+  }
+]

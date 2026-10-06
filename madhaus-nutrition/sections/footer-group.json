@@ -1,0 +1,18 @@
+{
+  "name": "Footer",
+  "type": "footer",
+  "sections": {
+    "footer": {
+      "type": "footer",
+      "blocks": {
+        "shop": { "type": "menu", "settings": { "title": "Shop", "menu": "footer" } },
+        "help": { "type": "menu", "settings": { "title": "Help", "menu": "footer" } }
+      },
+      "block_order": ["shop", "help"],
+      "settings": {
+        "tagline": "Fuel the madness. Built for people who train hard and don't make excuses."
+      }
+    }
+  },
+  "order": ["footer"]
+}

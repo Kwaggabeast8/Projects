@@ -1,0 +1,7 @@
+{
+  "sections": {
+    "main": { "type": "main-product", "settings": {} },
+    "more": { "type": "featured-collection", "settings": { "title": "YOU MAY ALSO LIKE", "limit": 4 } }
+  },
+  "order": ["main", "more"]
+}

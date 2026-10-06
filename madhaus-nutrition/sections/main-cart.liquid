@@ -1,0 +1,45 @@
+<section class="section">
+  <div class="container">
+    <h1 class="page-title">YOUR CART</h1>
+
+    {%- if cart.item_count == 0 -%}
+      <div class="empty">
+        <p>Your cart is empty.</p>
+        <a class="btn" href="{{ routes.all_products_collection_url }}">Continue shopping</a>
+      </div>
+    {%- else -%}
+      <form action="{{ routes.cart_url }}" method="post" class="cart">
+        <ul class="cart__items">
+          {%- for item in cart.items -%}
+            <li class="cart__item">
+              <a class="cart__img" href="{{ item.url }}">
+                {%- if item.image -%}{{ item.image | image_url: width: 200 | image_tag: loading: 'lazy', alt: item.image.alt }}{%- endif -%}
+              </a>
+              <div class="cart__details">
+                <a class="cart__title" href="{{ item.url }}">{{ item.product.title }}</a>
+                {%- unless item.product.has_only_default_variant -%}<p class="muted">{{ item.variant.title }}</p>{%- endunless -%}
+                <a class="muted link-remove" href="{{ item.url_to_remove }}">Remove</a>
+              </div>
+              <input class="cart__qty" type="number" name="updates[]" value="{{ item.quantity }}" min="0" aria-label="Quantity for {{ item.product.title }}">
+              <div class="price"><span class="price__current">{{ item.final_line_price | money }}</span></div>
+            </li>
+          {%- endfor -%}
+        </ul>
+
+        <div class="cart__summary">
+          <div class="cart__total">
+            <span>Subtotal</span>
+            <span class="price price--lg"><span class="price__current">{{ cart.total_price | money }}</span></span>
+          </div>
+          <p class="muted">Shipping and taxes calculated at checkout.</p>
+          <button class="btn btn--block" type="submit" name="checkout">Checkout</button>
+          <button class="btn btn--ghost btn--block" type="submit" name="update">Update cart</button>
+        </div>
+      </form>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{ "name": "Cart", "settings": [] }
+{% endschema %}

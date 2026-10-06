@@ -1,0 +1,31 @@
+<div class="marquee" aria-hidden="true">
+  <div class="marquee__track">
+    {%- for i in (1..2) -%}
+      <div class="marquee__group">
+        {%- for block in section.blocks -%}
+          <span {{ block.shopify_attributes }}>{{ block.settings.text }}</span><i>&#9670;</i>
+        {%- endfor -%}
+      </div>
+    {%- endfor -%}
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Scrolling banner",
+  "blocks": [
+    { "type": "text", "name": "Text", "settings": [{ "type": "text", "id": "text", "label": "Text", "default": "NO FILLERS" }] }
+  ],
+  "presets": [
+    {
+      "name": "Scrolling banner",
+      "blocks": [
+        { "type": "text", "settings": { "text": "NO FILLERS" } },
+        { "type": "text", "settings": { "text": "NO EXCUSES" } },
+        { "type": "text", "settings": { "text": "LAB TESTED" } },
+        { "type": "text", "settings": { "text": "MADE FOR THE GRIND" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,35 @@
+<header class="header">
+  <div class="container header__inner">
+    <button class="header__burger" type="button" aria-label="Menu" aria-expanded="false" data-menu-toggle>
+      <span></span><span></span><span></span>
+    </button>
+
+    <a class="header__logo" href="{{ routes.root_url }}">
+      {%- if settings.logo != blank -%}
+        <img src="{{ settings.logo | image_url: width: 520 }}" alt="{{ shop.name }}" width="{{ settings.logo_width }}" style="width: {{ settings.logo_width }}px; height: auto;">
+      {%- else -%}
+        <span class="logo-text">MAD<span>HAUS</span> <small>NUTRITION</small></span>
+      {%- endif -%}
+    </a>
+
+    <nav class="header__nav" data-nav aria-label="Main">
+      {%- for link in linklists[section.settings.menu].links -%}
+        <a href="{{ link.url }}"{% if link.current %} aria-current="page"{% endif %}>{{ link.title }}</a>
+      {%- endfor -%}
+    </nav>
+
+    <div class="header__icons">
+      <a href="{{ routes.search_url }}" aria-label="Search">Search</a>
+      <a href="{{ routes.cart_url }}" class="header__cart">Cart <span class="cart-count" data-cart-count>{{ cart.item_count }}</span></a>
+    </div>
+  </div>
+</header>
+
+{% schema %}
+{
+  "name": "Header",
+  "settings": [
+    { "type": "link_list", "id": "menu", "label": "Menu", "default": "main-menu" }
+  ]
+}
+{% endschema %}

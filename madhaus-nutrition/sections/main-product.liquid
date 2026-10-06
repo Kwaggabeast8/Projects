@@ -1,0 +1,79 @@
+{%- assign current_variant = product.selected_or_first_available_variant -%}
+<section class="section product" data-product>
+  <div class="container product__grid">
+    <div class="product__gallery">
+      {%- for media in product.media -%}
+        <div class="product__img{% if forloop.first %} product__img--main{% endif %}">
+          {%- if forloop.first -%}
+            {{ media | image_url: width: 1200 | image_tag: loading: 'eager', widths: '500, 800, 1200', sizes: '(min-width: 900px) 50vw, 100vw', alt: media.alt }}
+          {%- else -%}
+            {{ media | image_url: width: 1200 | image_tag: loading: 'lazy', widths: '500, 800, 1200', sizes: '(min-width: 900px) 50vw, 100vw', alt: media.alt }}
+          {%- endif -%}
+        </div>
+      {%- else -%}
+        <div class="product__img product__img--main"><div class="card__placeholder">MADHAUS</div></div>
+      {%- endfor -%}
+    </div>
+
+    <div class="product__info">
+      {%- if product.vendor != blank -%}<p class="eyebrow">{{ product.vendor }}</p>{%- endif -%}
+      <h1>{{ product.title }}</h1>
+
+      <div class="price price--lg{% if current_variant.compare_at_price > current_variant.price %} price--sale{% endif %}">
+        <span class="price__current" data-price>{{ current_variant.price | money }}</span>
+        <s class="price__compare" data-compare-price{% unless current_variant.compare_at_price > current_variant.price %} hidden{% endunless %}>{{ current_variant.compare_at_price | money }}</s>
+      </div>
+
+      {%- form 'product', product, class: 'product__form' -%}
+        {%- unless product.has_only_default_variant -%}
+          <label for="variant-{{ section.id }}">{{ product.options | join: ' / ' }}</label>
+          <select id="variant-{{ section.id }}" name="id" data-variant-select>
+            {%- for variant in product.variants -%}
+              <option value="{{ variant.id }}"
+                data-price="{{ variant.price | money }}"
+                data-compare="{% if variant.compare_at_price > variant.price %}{{ variant.compare_at_price | money }}{% endif %}"
+                data-available="{{ variant.available }}"
+                {% if variant == current_variant %}selected{% endif %}
+                {% unless variant.available %}disabled{% endunless %}>
+                {{ variant.title }}{% unless variant.available %} – Sold out{% endunless %}
+              </option>
+            {%- endfor -%}
+          </select>
+        {%- else -%}
+          <input type="hidden" name="id" value="{{ current_variant.id }}">
+        {%- endunless -%}
+
+        <div class="product__buy">
+          <div class="qty">
+            <button type="button" data-qty-minus aria-label="Decrease">&minus;</button>
+            <input type="number" name="quantity" value="1" min="1" aria-label="Quantity" data-qty>
+            <button type="button" data-qty-plus aria-label="Increase">+</button>
+          </div>
+          <button class="btn btn--block" type="submit" data-add {% unless current_variant.available %}disabled{% endunless %}>
+            {%- if current_variant.available -%}Add to cart{%- else -%}Sold out{%- endif -%}
+          </button>
+        </div>
+      {%- endform -%}
+
+      <div class="rte product__desc">{{ product.description }}</div>
+
+      {%- if product.metafields.custom.supplement_facts != blank -%}
+        <details class="accordion">
+          <summary>Supplement facts</summary>
+          <div class="rte">{{ product.metafields.custom.supplement_facts | metafield_tag }}</div>
+        </details>
+      {%- endif -%}
+      <details class="accordion">
+        <summary>Shipping &amp; returns</summary>
+        <div class="rte"><p>Orders ship within 24 hours. 30-day money-back guarantee on your first purchase.</p></div>
+      </details>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Product",
+  "settings": []
+}
+{% endschema %}

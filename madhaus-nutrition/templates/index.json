@@ -1,0 +1,29 @@
+{
+  "sections": {
+    "hero": { "type": "hero", "settings": {} },
+    "marquee": {
+      "type": "marquee",
+      "blocks": {
+        "a": { "type": "text", "settings": { "text": "NO FILLERS" } },
+        "b": { "type": "text", "settings": { "text": "NO EXCUSES" } },
+        "c": { "type": "text", "settings": { "text": "LAB TESTED" } },
+        "d": { "type": "text", "settings": { "text": "MADE FOR THE GRIND" } }
+      },
+      "block_order": ["a", "b", "c", "d"]
+    },
+    "best-sellers": { "type": "featured-collection", "settings": { "title": "BEST SELLERS", "limit": 4 } },
+    "story": { "type": "image-with-text", "settings": {} },
+    "benefits": {
+      "type": "benefits",
+      "blocks": {
+        "a": { "type": "benefit", "settings": { "title": "CLEAN FORMULAS", "text": "Full-dose ingredients. No proprietary blends, no fillers." } },
+        "b": { "type": "benefit", "settings": { "title": "LAB TESTED", "text": "Every batch is third-party tested for purity and potency." } },
+        "c": { "type": "benefit", "settings": { "title": "FAST SHIPPING", "text": "Orders ship within 24 hours so you never run out." } },
+        "d": { "type": "benefit", "settings": { "title": "30-DAY GUARANTEE", "text": "Don't love it? We'll make it right." } }
+      },
+      "block_order": ["a", "b", "c", "d"]
+    },
+    "newsletter": { "type": "newsletter", "settings": {} }
+  },
+  "order": ["hero", "marquee", "best-sellers", "story", "benefits", "newsletter"]
+}

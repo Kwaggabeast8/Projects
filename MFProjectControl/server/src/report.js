@@ -306,6 +306,7 @@ function buildReport({ bundle, from, to, include, uploadsDir, stored }) {
     const suDates = new Map(bundle.site_updates.map((u) => [u.id, u.update_date]));
     const photos = bundle.photos.filter((f) => !f.comment_id && /image\/(jpeg|png)/.test(f.mime) && (f.site_update_id ? (suDates.get(f.site_update_id) >= from && suDates.get(f.site_update_id) <= to) : inPeriod(f)))
       .sort((a, b) => a.id - b.id).slice(0, 16);
+    space(photos.length ? 260 : 80);
     heading('Progress photographs');
     if (!photos.length) para('No photographs were uploaded in this reporting period.', { color: C.grey });
     const pw = (CW - 14) / 2, ph = 165;

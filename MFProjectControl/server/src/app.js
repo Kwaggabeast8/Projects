@@ -48,7 +48,7 @@ function clean(spec, body, partial) {
     }
     if (typeof v === 'string') v = v.trim();
     if (v === '' || v === null) {
-      if (s.req) throw bad(`${s.label || k} is required`);
+      if (s.req || s.t === 'enum') throw bad(`${s.label || k} is required`);
       out[k] = s.t === 'date' || s.nullable ? null : s.t === 'int' || s.t === 'num' ? 0 : '';
       continue;
     }

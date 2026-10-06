@@ -1,0 +1,232 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Madhaus preview</title><link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;700;800&display=swap" rel="stylesheet"><style>:root{--color-bg:#0a0a0a;--color-surface:#151515;--color-text:#f5f5f5;--color-accent:#e10600;--color-price:#c8ff00}/* Madhaus Nutrition – black / red / neon price */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--color-bg); color: var(--color-text);
+  font-family: 'Inter', system-ui, sans-serif; font-size: 16px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3, h4 { font-family: 'Anton', Impact, sans-serif; font-weight: 400; text-transform: uppercase; letter-spacing: .02em; line-height: 1.05; margin: 0 0 .5em; }
+h1 { font-size: clamp(2.6rem, 8vw, 5.5rem); }
+h2 { font-size: clamp(1.9rem, 4.5vw, 3rem); }
+h3 { font-size: 1.25rem; }
+p { margin: 0 0 1em; }
+.muted { color: #9a9a9a; font-size: .9rem; }
+.visually-hidden, .skip-link:not(:focus) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.skip-link:focus { position: fixed; top: 8px; left: 8px; z-index: 100; background: var(--color-accent); padding: 8px 14px; }
+:focus-visible { outline: 2px solid var(--color-price); outline-offset: 2px; }
+
+.container { width: 100%; max-width: 1280px; margin: 0 auto; padding: 0 20px; }
+.container--narrow { max-width: 760px; }
+.section { padding: 64px 0; }
+.section--surface { background: var(--color-surface); }
+.section--accent { background: var(--color-accent); }
+.section__head { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-bottom: 28px; }
+.section__head h2 { margin: 0; }
+.page-title, .page-head h1 { font-size: clamp(2.2rem, 6vw, 4rem); margin-bottom: 24px; }
+.eyebrow { color: var(--color-accent); font-weight: 800; letter-spacing: .2em; font-size: .8rem; text-transform: uppercase; margin-bottom: 12px; }
+.link-arrow { font-weight: 700; text-transform: uppercase; font-size: .85rem; letter-spacing: .08em; border-bottom: 2px solid var(--color-accent); }
+
+/* Buttons */
+.btn {
+  display: inline-block; cursor: pointer; border: 2px solid var(--color-accent);
+  background: var(--color-accent); color: #fff; padding: 14px 30px;
+  font: 800 .9rem/1 'Inter', sans-serif; letter-spacing: .12em; text-transform: uppercase;
+  transition: transform .15s, background .15s, color .15s, box-shadow .15s;
+}
+.btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(0,0,0,.45); }
+.btn--ghost { background: transparent; color: #fff; border-color: #fff; }
+.btn--ghost:hover { background: #fff; color: #000; }
+.btn--dark { background: #000; border-color: #000; }
+.btn--block { display: block; width: 100%; text-align: center; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* Announcement + header */
+.announcement { background: var(--color-accent); text-align: center; padding: 8px 16px; font-weight: 800; font-size: .75rem; letter-spacing: .18em; text-transform: uppercase; }
+.header { position: sticky; top: 0; z-index: 50; background: rgba(10,10,10,.92); backdrop-filter: blur(10px); border-bottom: 1px solid #222; }
+.header__inner { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 72px; }
+.header__nav { display: flex; gap: 28px; grid-column: 1; grid-row: 1; }
+.header__logo { grid-column: 2; grid-row: 1; }
+.header__icons { grid-column: 3; grid-row: 1; display: flex; gap: 22px; justify-content: flex-end; }
+.header__nav a, .header__icons a { font-weight: 700; font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; }
+.header__nav a:hover, .header__icons a:hover, .header__nav a[aria-current] { color: var(--color-accent); }
+.logo-text { font-family: 'Anton', sans-serif; font-size: 1.8rem; letter-spacing: .04em; line-height: 1; white-space: nowrap; }
+.logo-text span { color: var(--color-accent); }
+.logo-text small { font-family: 'Inter', sans-serif; font-weight: 800; font-size: .5rem; letter-spacing: .3em; color: var(--color-text); vertical-align: middle; margin-left: 4px; }
+.cart-count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; background: var(--color-accent); border-radius: 10px; font-size: .7rem; }
+.header__burger { display: none; background: none; border: 0; padding: 8px; cursor: pointer; grid-column: 1; grid-row: 1; justify-self: start; }
+.header__burger span { display: block; width: 24px; height: 2px; background: #fff; margin: 5px 0; }
+
+/* Hero */
+.hero { position: relative; min-height: 78vh; display: flex; align-items: center; overflow: hidden; background: radial-gradient(circle at 75% 40%, #3a0200 0%, var(--color-bg) 60%); }
+.hero__bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,var(--overlay)), rgba(0,0,0,calc(var(--overlay) * .3))); }
+.hero__content { position: relative; z-index: 1; }
+.hero h1 { max-width: 12ch; margin-bottom: 16px; text-shadow: 0 4px 30px rgba(0,0,0,.5); }
+.hero__sub { max-width: 46ch; font-size: 1.15rem; color: #ddd; }
+.hero__buttons { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 24px; }
+
+/* Marquee */
+.marquee { background: var(--color-accent); overflow: hidden; border-block: 2px solid #000; }
+.marquee__track { display: flex; width: max-content; animation: scroll 28s linear infinite; }
+.marquee__group { display: flex; align-items: center; gap: 28px; padding: 14px 14px; font-family: 'Anton', sans-serif; font-size: 1.3rem; letter-spacing: .08em; white-space: nowrap; }
+.marquee__group i { font-style: normal; font-size: .8rem; color: #000; }
+@keyframes scroll { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .marquee__track { animation: none; } html { scroll-behavior: auto; } }
+
+/* Product grid + cards */
+.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+.grid--3 { grid-template-columns: repeat(3, 1fr); }
+.card { background: var(--color-surface); border: 1px solid #242424; transition: transform .2s, border-color .2s; }
+.card:hover { transform: translateY(-4px); border-color: var(--color-accent); }
+.card__media { position: relative; display: block; aspect-ratio: 1; overflow: hidden; background: #000; }
+.card__media img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s; }
+.card:hover .card__media img { transform: scale(1.05); }
+.card__placeholder { width: 100%; height: 100%; min-height: 200px; display: grid; place-items: center; font-family: 'Anton', sans-serif; font-size: 1.6rem; letter-spacing: .1em; color: #2a2a2a; background: #0f0f0f; }
+.card__body { padding: 16px; }
+.card__title { font-size: 1.05rem; margin: 0 0 8px; }
+.badge { position: absolute; top: 12px; left: 12px; background: var(--color-accent); color: #fff; font-weight: 800; font-size: .7rem; letter-spacing: .12em; padding: 4px 10px; }
+.badge--out { background: #fff; color: #000; }
+
+/* Price – the neon */
+.price { display: flex; align-items: baseline; gap: 10px; font-weight: 800; }
+.price__current { color: var(--color-price); font-size: 1.15rem; text-shadow: 0 0 14px color-mix(in srgb, var(--color-price) 45%, transparent); }
+.price__compare { color: #777; font-weight: 500; font-size: .95rem; }
+.price--lg .price__current { font-size: 2rem; }
+.price--lg { margin-bottom: 24px; }
+
+/* Split / benefits / newsletter */
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+.split--reverse .split__media { order: 2; }
+.split__media img, .split__media .card__placeholder { width: 100%; aspect-ratio: 4/5; object-fit: cover; border: 2px solid var(--color-accent); }
+.benefits { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; }
+.benefit { border-top: 3px solid var(--color-accent); padding-top: 16px; }
+.benefit p { color: #aaa; margin: 0; }
+.newsletter { text-align: center; max-width: 640px; }
+.newsletter h2 { color: #000; }
+.newsletter p { color: #fff; }
+.newsletter__form { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.newsletter__form input[type=email] { flex: 1 1 240px; padding: 14px 16px; border: 2px solid #000; background: #fff; color: #000; font: inherit; }
+.newsletter__msg { width: 100%; font-weight: 700; }
+
+/* Collection */
+.sort { display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-bottom: 20px; font-size: .85rem; }
+select, input[type=number], input[type=search] { background: var(--color-surface); color: var(--color-text); border: 1px solid #333; padding: 12px 14px; font: inherit; border-radius: 0; }
+.pagination { display: flex; justify-content: center; gap: 24px; margin-top: 40px; font-weight: 700; }
+.pagination a { color: var(--color-accent); }
+
+/* Product page */
+.product__grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: start; }
+.product__gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.product__img--main { grid-column: 1 / -1; }
+.product__img img { width: 100%; background: #000; border: 1px solid #222; }
+.product__info { position: sticky; top: 96px; }
+.product__info h1 { font-size: clamp(2rem, 4vw, 3.2rem); }
+.product__form label { display: block; font-weight: 700; font-size: .75rem; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 8px; color: #aaa; }
+.product__form select { width: 100%; margin-bottom: 18px; }
+.product__buy { display: flex; gap: 12px; margin-bottom: 28px; }
+.qty { display: flex; border: 1px solid #333; }
+.qty button { width: 40px; background: var(--color-surface); color: #fff; border: 0; font-size: 1.2rem; cursor: pointer; }
+.qty button:hover { background: var(--color-accent); }
+.qty input { width: 52px; text-align: center; border: 0; padding: 0; -moz-appearance: textfield; }
+.qty input::-webkit-outer-spin-button, .qty input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.product__buy .btn { flex: 1; }
+.accordion { border-top: 1px solid #2a2a2a; padding: 14px 0; }
+.accordion:last-of-type { border-bottom: 1px solid #2a2a2a; }
+.accordion summary { cursor: pointer; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; font-size: .85rem; }
+.rte { color: #cfcfcf; }
+.rte a { color: var(--color-accent); text-decoration: underline; }
+.rte h2, .rte h3 { color: #fff; margin-top: 1.4em; }
+
+/* Cart */
+.empty { text-align: center; padding: 40px 0; }
+.cart { display: grid; grid-template-columns: 1fr 340px; gap: 40px; align-items: start; }
+.cart__items { list-style: none; margin: 0; padding: 0; }
+.cart__item { display: grid; grid-template-columns: 90px 1fr 70px 100px; gap: 16px; align-items: center; padding: 18px 0; border-bottom: 1px solid #242424; }
+.cart__img img { width: 90px; height: 90px; object-fit: cover; background: #000; }
+.cart__title { font-weight: 700; }
+.link-remove { text-decoration: underline; }
+.cart__qty { width: 70px; text-align: center; }
+.cart__item .price { justify-content: flex-end; }
+.cart__summary { background: var(--color-surface); border: 1px solid #242424; padding: 24px; display: grid; gap: 12px; }
+.cart__total { display: flex; justify-content: space-between; align-items: center; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.cart__total .price--lg { margin: 0; }
+.search-form { display: flex; gap: 10px; margin-bottom: 20px; }
+.search-form input[type=search] { flex: 1; }
+
+/* Footer */
+.footer { background: #000; border-top: 3px solid var(--color-accent); padding: 56px 0 24px; margin-top: 0; }
+.footer__grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 40px; }
+.footer__brand p { color: #999; max-width: 36ch; margin-top: 14px; }
+.footer__social { display: flex; gap: 16px; flex-wrap: wrap; }
+.footer__social a { font-weight: 700; font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; }
+.footer__social a:hover, .footer__col a:hover { color: var(--color-accent); }
+.footer__col h4 { color: var(--color-accent); font-size: 1rem; letter-spacing: .12em; }
+.footer__col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; color: #bbb; }
+.footer__bottom { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-top: 40px; padding-top: 20px; border-top: 1px solid #1d1d1d; font-size: .75rem; color: #777; }
+.footer__disclaimer { max-width: 60ch; }
+
+/* Responsive */
+@media (max-width: 989px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+  .grid--3 { grid-template-columns: repeat(2, 1fr); }
+  .benefits { grid-template-columns: repeat(2, 1fr); }
+  .split, .product__grid, .cart { grid-template-columns: 1fr; gap: 32px; }
+  .split--reverse .split__media { order: 0; }
+  .product__info { position: static; }
+  .header__burger { display: block; }
+  .header__nav { display: none; position: absolute; top: 72px; left: 0; right: 0; flex-direction: column; gap: 0; background: #000; border-bottom: 2px solid var(--color-accent); }
+  .header__nav.is-open { display: flex; }
+  .header__nav a { padding: 16px 20px; border-top: 1px solid #1d1d1d; }
+}
+@media (max-width: 599px) {
+  .section { padding: 44px 0; }
+  .grid { gap: 12px; }
+  .card__body { padding: 12px; }
+  .benefits { grid-template-columns: 1fr; }
+  .footer__grid { grid-template-columns: 1fr 1fr; }
+  .footer__brand { grid-column: 1 / -1; }
+  .header__icons a:first-child { display: none; }
+  .cart__item { grid-template-columns: 70px 1fr 60px; }
+  .cart__item .price { grid-column: 2 / -1; justify-content: flex-start; }
+  .cart__img img { width: 70px; height: 70px; }
+}
+</style></head><body><div class="announcement">FREE SHIPPING ON ORDERS OVER $75</div>
+<header class="header"><div class="container header__inner">
+<nav class="header__nav"><a href="#">Shop</a><a href="#">Stacks</a><a href="#">Our Story</a></nav>
+<a class="header__logo" href="#"><span class="logo-text">MAD<span>HAUS</span> <small>NUTRITION</small></span></a>
+<div class="header__icons"><a href="#">Search</a><a href="#" class="header__cart">Cart <span class="cart-count">2</span></a></div></div></header>
+<main>
+<section class="hero" style="--overlay:.6"><div class="container hero__content">
+<p class="eyebrow">NEW DROP</p><h1>FUEL THE MADNESS</h1>
+<p class="hero__sub">Clean, high-performance nutrition for people who train hard.</p>
+<div class="hero__buttons"><a class="btn" href="#">Shop now</a><a class="btn btn--ghost" href="#">Best sellers</a></div></div></section>
+<div class="marquee"><div class="marquee__track"><div class="marquee__group"><span>NO FILLERS</span><i>◆</i><span>NO EXCUSES</span><i>◆</i><span>LAB TESTED</span><i>◆</i><span>MADE FOR THE GRIND</span><i>◆</i><span>NO FILLERS</span><i>◆</i><span>NO EXCUSES</span><i>◆</i><span>LAB TESTED</span><i>◆</i></div></div></div>
+<section class="section"><div class="container"><div class="section__head"><h2>BEST SELLERS</h2><a class="link-arrow" href="#">View all →</a></div>
+<div class="grid">
+<article class="card"><a class="card__media"><div class="card__placeholder">WHEY</div><span class="badge">SALE</span></a><div class="card__body"><h3 class="card__title">Mad Whey Isolate</h3><div class="price"><span class="price__current">$44.99</span><s class="price__compare">$54.99</s></div></div></article>
+<article class="card"><a class="card__media"><div class="card__placeholder">PRE</div></a><div class="card__body"><h3 class="card__title">Mayhem Pre-Workout</h3><div class="price"><span class="price__current">$39.99</span></div></div></article>
+<article class="card"><a class="card__media"><div class="card__placeholder">CREATINE</div></a><div class="card__body"><h3 class="card__title">Creatine Monohydrate</h3><div class="price"><span class="price__current">$24.99</span></div></div></article>
+<article class="card"><a class="card__media"><div class="card__placeholder">AMINOS</div><span class="badge badge--out">SOLD OUT</span></a><div class="card__body"><h3 class="card__title">EAA Recovery</h3><div class="price"><span class="price__current">From $29.99</span></div></div></article>
+</div></div></section>
+<section class="section section--surface"><div class="container benefits">
+<div class="benefit"><h3>CLEAN FORMULAS</h3><p>Full-dose ingredients. No proprietary blends.</p></div>
+<div class="benefit"><h3>LAB TESTED</h3><p>Every batch third-party tested.</p></div>
+<div class="benefit"><h3>FAST SHIPPING</h3><p>Orders ship within 24 hours.</p></div>
+<div class="benefit"><h3>30-DAY GUARANTEE</h3><p>Don't love it? We'll make it right.</p></div></div></section>
+<section class="section"><div class="container product__grid">
+<div class="product__gallery"><div class="product__img product__img--main"><div class="card__placeholder" style="aspect-ratio:1">MAD WHEY</div></div></div>
+<div class="product__info"><p class="eyebrow">Madhaus Nutrition</p><h1>Mad Whey Isolate</h1>
+<div class="price price--lg price--sale"><span class="price__current">$44.99</span><s class="price__compare">$54.99</s></div>
+<form class="product__form"><label>Flavour</label><select><option>Chocolate Mayhem</option></select>
+<div class="product__buy"><div class="qty"><button type="button">−</button><input type="number" value="1"><button type="button">+</button></div><button class="btn btn--block" type="button">Add to cart</button></div></form>
+<div class="rte"><p>25g protein per scoop. Zero fillers. Built for people who train hard.</p></div></div></div></section>
+<section class="section section--accent"><div class="container newsletter"><h2>JOIN THE MADHAUS</h2><p>Get 10% off your first order plus early access to new drops.</p>
+<form class="newsletter__form"><input type="email" placeholder="Your email"><button class="btn btn--dark" type="button">Sign up</button></form></div></section>
+</main>
+<footer class="footer"><div class="container footer__grid"><div class="footer__brand"><span class="logo-text">MAD<span>HAUS</span> <small>NUTRITION</small></span><p>Fuel the madness.</p></div>
+<div class="footer__col"><h4>Shop</h4><ul><li>All products</li><li>Stacks</li></ul></div><div class="footer__col"><h4>Help</h4><ul><li>Shipping</li><li>Contact</li></ul></div></div>
+<div class="container footer__bottom"><span>© 2026 Madhaus Nutrition</span></div></footer>
+</body></html>

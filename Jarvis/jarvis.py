@@ -136,6 +136,7 @@ class Jarvis:
         self.confirm = confirm
         self.auto = auto
         self.shot_scale = 1.0
+        self.on_tool = None  # optional callback(name, args, result_text) for the web HUD
 
     # ---- tools -------------------------------------------------------
     def run_tool(self, name, a):
@@ -201,11 +202,14 @@ class Jarvis:
             if not self.confirm(f"Shall I {describe(block.name, block.input)}?"):
                 return "The user declined this action.", True
         try:
-            return self.run_tool(block.name, block.input), False
+            out, err = self.run_tool(block.name, block.input), False
         except subprocess.TimeoutExpired:
-            return "Error: command timed out after 60 seconds.", True
+            out, err = "Error: command timed out after 60 seconds.", True
         except Exception as e:  # report failures back to the model
-            return f"Error: {e}", True
+            out, err = f"Error: {e}", True
+        if self.on_tool:
+            self.on_tool(block.name, json.dumps(block.input)[:120], out if isinstance(out, str) else "[image]")
+        return out, err
 
     # ---- conversation ------------------------------------------------
     def ask(self, text):
@@ -279,8 +283,15 @@ def main():
     ap.add_argument("--wake", default="jarvis", help="wake word in voice mode (default: jarvis)")
     ap.add_argument("--stt", choices=["google", "whisper"], default="google",
                     help="speech recognition: google (online) or whisper (local, private)")
+    ap.add_argument("--ui", action="store_true", help="open the web HUD (voice runs in your browser)")
+    ap.add_argument("--port", type=int, default=8765, help="HUD port (default 8765)")
     ap.add_argument("--auto", action="store_true", help="skip confirmations for risky actions")
     args = ap.parse_args()
+
+    if args.ui:
+        import jarvis_server
+        jarvis_server.serve(Jarvis, args.port, args.auto)
+        return
 
     io_ = Voice(args.stt) if args.voice else Typed()
 

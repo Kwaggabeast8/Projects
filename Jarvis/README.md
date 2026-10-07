@@ -12,6 +12,14 @@ python jarvis.py --voice               # say "Jarvis, open my downloads folder"
 python jarvis.py                       # typed mode
 ```
 
+## HUD interface
+`python jarvis.py --ui` opens a sci-fi heads-up display in your browser (http://localhost:8765):
+a reactor that reacts to listening / thinking / speaking, live clock and CPU/memory gauges,
+an activity log, and yes/no approval cards. Use Chrome or Edge: they provide the microphone
+and voice, so say "Jarvis, ..." after pressing MIC. The server only listens on localhost and
+requires a random per-run token, since Jarvis can run commands. `ui/hud.html` also works on its
+own as a simulated demo.
+
 ## What it can do
 Run shell commands, read/write/list files, open apps/files/URLs, search the web,
 take screenshots, click, type and press keys, keep notes, do math. Because it can

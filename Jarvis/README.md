@@ -2,6 +2,9 @@
 
 A voice-controlled computer assistant powered by Claude.
 
+**Easy install:** run `./install.sh` (macOS/Linux) or `install.bat` (Windows), then `./jarvis --voice`.
+
+Manual install:
 ```
 pip install -r requirements.txt        # PyAudio may need portaudio (apt install portaudio19-dev / brew install portaudio)
 export ANTHROPIC_API_KEY=sk-ant-...

@@ -3,3 +3,6 @@ notes.json
 google_token.json
 client_secret*.json
 .env
+jarvis
+jarvis.bat
+.venv/

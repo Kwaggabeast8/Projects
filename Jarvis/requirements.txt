@@ -1,0 +1,5 @@
+anthropic>=1.0
+# Optional voice mode (python jarvis.py --voice):
+# SpeechRecognition
+# PyAudio
+# pyttsx3

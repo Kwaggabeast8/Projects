@@ -1,0 +1,6 @@
+# Only for the terminal voice mode (python jarvis.py --voice). The HUD does not need these.
+SpeechRecognition
+PyAudio
+pyttsx3
+# Local speech recognition (--voice --stt whisper)
+faster-whisper

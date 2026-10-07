@@ -28,6 +28,17 @@ import anthropic
 
 import integrations
 
+def _load_env():
+    """Read KEY=VALUE lines from Jarvis/.env so no launcher script has to."""
+    f = Path(__file__).with_name(".env")
+    if f.exists():
+        for line in f.read_text().splitlines():
+            if "=" in line and not line.lstrip().startswith("#"):
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip().strip('"\''))
+
+
+_load_env()
 MODEL = os.environ.get("JARVIS_MODEL", "claude-opus-5-5")
 NOTES_FILE = Path(__file__).with_name("notes.json")
 MAX_OUTPUT = 8000
@@ -287,6 +298,10 @@ def main():
     ap.add_argument("--port", type=int, default=8765, help="HUD port (default 8765)")
     ap.add_argument("--auto", action="store_true", help="skip confirmations for risky actions")
     args = ap.parse_args()
+
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        raise SystemExit("No API key found. Put  ANTHROPIC_API_KEY=sk-ant-...  in the file Jarvis/.env "
+                         "(create it at console.anthropic.com -> API keys).")
 
     if args.ui:
         import jarvis_server

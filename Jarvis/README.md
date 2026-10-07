@@ -2,7 +2,7 @@
 
 A voice-controlled computer assistant powered by Claude.
 
-**Easy install:** run `./install.sh` (macOS/Linux) or `install.bat` (Windows), then `./jarvis --voice`.
+**Easy install:** see START_HERE.md.
 
 Manual install:
 ```

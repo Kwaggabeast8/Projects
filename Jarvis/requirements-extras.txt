@@ -1,0 +1,3 @@
+# Only for Google Calendar integration
+google-api-python-client
+google-auth-oauthlib

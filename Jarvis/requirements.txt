@@ -1,13 +1,3 @@
 anthropic>=1.0
-# Voice
-SpeechRecognition
-PyAudio
-pyttsx3
-# Screen / keyboard / mouse control
-pyautogui
-# Optional: local speech recognition (--stt whisper)
-faster-whisper
-# Optional: Google Calendar
-google-api-python-client
-google-auth-oauthlib
 psutil
+pyautogui

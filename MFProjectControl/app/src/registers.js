@@ -129,9 +129,10 @@ const SU_FIELDS = [
 export function SiteUpdatesTab({ data, user, pm, reload, projectId }) {
   const { toast } = useUI();
   const isAdmin = user.role === 'ADMIN';
-  const canAdd = pm.updates === 'edit';
-  const canEditU = (u) => isAdmin || (canAdd && u.created_by === user.id);
-  const canManage = (f) => isAdmin || (canAdd && f.uploaded_by === user.id);
+  const canAdd = pm.updates === 'edit' || pm.updates === 'all';
+  const all = isAdmin || pm.updates === 'all'; // may change other people's updates too
+  const canEditU = (u) => all || (canAdd && u.created_by === user.id);
+  const canManage = (f) => all || (canAdd && f.uploaded_by === user.id);
   const [editing, setEditing] = useState(null);
   const [photos, setPhotos] = useState([]);
   const open = (v) => { setPhotos([]); setEditing(v); };
@@ -180,7 +181,8 @@ export function SiteUpdatesTab({ data, user, pm, reload, projectId }) {
 // ---------- comments ----------
 export function CommentsTab({ data, user, pm, reload, projectId }) {
   const admin = user.role === 'ADMIN';
-  const canPost = pm.comments === 'edit';
+  const canPost = pm.comments === 'edit' || pm.comments === 'all';
+  const canDelete = admin || pm.comments === 'all';
   const { toast, confirm } = useUI();
   const [text, setText] = useState('');
   const [photos, setPhotos] = useState([]);
@@ -208,10 +210,10 @@ export function CommentsTab({ data, user, pm, reload, projectId }) {
         <Card key={c.id}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
             <View style={{ flex: 1 }}><Text style={{ fontWeight: '800', color: C.navy }}>{c.user_name}</Text><Muted style={{ fontSize: 12 }}>{fmtTs(c.created_at)}</Muted></View>
-            {admin && <Btn label="Delete" kind="danger" small onPress={async () => { if (await confirm('Delete this comment?', 'The comment and its photos will be removed.')) { try { await api('DELETE', `/comments/${c.id}`); reload(); toast('Comment deleted'); } catch (e) { toast(e.message, 'err'); } } }} />}
+            {canDelete && <Btn label="Delete" kind="danger" small onPress={async () => { if (await confirm('Delete this comment?', 'The comment and its photos will be removed.')) { try { await api('DELETE', `/comments/${c.id}`); reload(); toast('Comment deleted'); } catch (e) { toast(e.message, 'err'); } } }} />}
           </View>
           <Text style={{ marginTop: 8, color: C.ink }}>{c.body}</Text>
-          <PhotoGrid files={c.files} canManage={() => admin} onChanged={reload} />
+          <PhotoGrid files={c.files} canManage={() => canDelete} onChanged={reload} />
         </Card>
       ))}
     </View>

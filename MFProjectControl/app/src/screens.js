@@ -183,8 +183,8 @@ export function ProjectScreen({ user, projectId, tab, setTab, rt, onBack }) {
 
 function Overview({ data, user, pm, reload, projectId }) {
   const isAdmin = user.role === 'ADMIN';
-  const canPhotos = pm.photos === 'edit';
-  const canManage = (f) => isAdmin || (canPhotos && f.uploaded_by === user.id);
+  const canPhotos = pm.photos === 'edit' || pm.photos === 'all';
+  const canManage = (f) => isAdmin || pm.photos === 'all' || (canPhotos && f.uploaded_by === user.id);
   const p = data.project, s = data.summary;
   const { toast } = useUI();
   const [photos, setPhotos] = useState([]);
@@ -222,7 +222,8 @@ function Overview({ data, user, pm, reload, projectId }) {
 }
 
 function History({ data, admin, pm, reload, projectId }) {
-  const canSnap = pm.history === 'edit';
+  const canSnap = pm.history === 'edit' || pm.history === 'all';
+  const canDeleteSnap = admin || pm.history === 'all';
   const { toast, confirm } = useUI();
   const [note, setNote] = useState('');
   const [open, setOpen] = useState(null);
@@ -261,7 +262,7 @@ function History({ data, admin, pm, reload, projectId }) {
           {!!open.note && <Text style={{ marginBottom: 10 }}>{open.note}</Text>}
           <Text style={[st.label, { marginBottom: 6 }]}>Activity progress at the time</Text>
           {open.detail.map((d) => <View key={d.id} style={{ marginBottom: 8 }}><Text style={{ fontSize: 13, fontWeight: '600' }}>{d.name}</Text><Muted>Actual {Math.round(d.actual)}%  ·  Planned {Math.round(d.planned)}%</Muted></View>)}
-          {admin && <View style={{ marginTop: 10 }}><Btn label="Delete snapshot" kind="danger" small onPress={async () => { if (await confirm('Delete this snapshot?', '')) { try { await api('DELETE', `/snapshots/${open.id}`); setOpen(null); reload(); } catch (e) { toast(e.message, 'err'); } } }} /></View>}
+          {canDeleteSnap && <View style={{ marginTop: 10 }}><Btn label="Delete snapshot" kind="danger" small onPress={async () => { if (await confirm('Delete this snapshot?', '')) { try { await api('DELETE', `/snapshots/${open.id}`); setOpen(null); reload(); } catch (e) { toast(e.message, 'err'); } } }} /></View>}
         </View>}
       </Sheet>
       {admin && (

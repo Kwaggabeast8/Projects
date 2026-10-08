@@ -162,3 +162,52 @@ test('audit trail records access changes', async () => {
   const ev = (await A('GET', `/api/projects/${ID.p}/audit`)).json.events;
   assert.ok(ev.some((e) => e.entity === 'Access' && /Foreman/.test(e.summary)), JSON.stringify(ev.filter((e) => e.entity === 'Access')));
 });
+
+test('higher edit levels: gantt edit, "all" on updates/photos/comments/history, site-manager preset', async () => {
+  const mk = async (key, email, access) => { const r = await A('POST', '/api/users', { name: key, email, password: 'Passw0rd!x', role: 'VIEWER', access }); ok(r, 201); ID[key] = r.json.user.id; T[key] = (await api('POST', '/api/auth/login', null, { email, password: 'Passw0rd!x' })).json.token; return as(key); };
+  const proj = ID.p;
+  // content authored by admin that others will try to change
+  const upd = (await A('POST', `/api/projects/${proj}/site-updates`, { progress_notes: 'by admin' })).json.item.id;
+  const ph = (await api('POST', `/api/projects/${proj}/files`, T.admin, photo({ site_update_id: upd }))).json.files[0].id;
+  const adminComment = (await A('POST', `/api/projects/${proj}/comments`, { body: 'admin comment' })).json.comment.id;
+  const snap = (await A('POST', `/api/projects/${proj}/snapshots`, { note: 'x' })).json.snapshot.id;
+
+  // 1) Gantt edit only: can change dates (via Gantt) but still sees nothing else
+  const GE = await mk('ganttEdit', 'ge@mf.test', [{ project_id: proj, permissions: { gantt: 'edit' } }]);
+  ok(await GE('PATCH', `/api/activities/${ID.a1}`, { finish_date: d(8) }));
+  assert.equal((await A('GET', `/api/projects/${proj}`)).json.activities.find((a) => a.id === ID.a1).finish_date, d(8));
+  ok(await GE('POST', `/api/projects/${proj}/activities`, { name: 'Added from Gantt', start_date: d(20), finish_date: d(25) }), 201);
+  ok(await GE('POST', `/api/projects/${proj}/rfis`, { subject: 'x' }), 403);
+  assert.deepEqual((await GE('GET', `/api/projects/${proj}`)).json.site_updates, []);
+
+  // 2) "edit" (own only) vs "all" (anyone's) on site updates + photos
+  const own = await mk('ownEditor', 'oe@mf.test', [{ project_id: proj, permissions: { updates: 'edit', photos: 'edit', comments: 'edit', history: 'edit' } }]);
+  ok(await own('PATCH', `/api/site-updates/${upd}`, { labour_count: 3 }), 403);
+  ok(await own('DELETE', `/api/files/${ph}`), 403);
+  ok(await own('DELETE', `/api/comments/${adminComment}`), 403);
+  ok(await own('DELETE', `/api/snapshots/${snap}`), 403);
+  ok(await own('PATCH', `/api/snapshots/${snap}`, { note: 'edited by editor' }));          // history edit may edit notes
+  const all = await mk('allEditor', 'ae@mf.test', [{ project_id: proj, permissions: { updates: 'all', photos: 'all', comments: 'all', history: 'all', programme: 'view' } }]);
+  ok(await all('PATCH', `/api/site-updates/${upd}`, { labour_count: 5 }));
+  ok(await all('PATCH', `/api/files/${ph}`, { caption: 'fixed by manager' }));
+  ok(await all('POST', `/api/projects/${proj}/comments`, { body: 'mine' }), 201);
+  ok(await all('DELETE', `/api/comments/${adminComment}`));
+  ok(await all('DELETE', `/api/snapshots/${snap}`));
+  ok(await all('DELETE', `/api/files/${ph}`));
+  ok(await all('DELETE', `/api/site-updates/${upd}`));
+  ok(await all('PATCH', `/api/activities/${ID.a1}`, { actual_progress: 10 }), 403);
+
+  // 3) Site manager preset = broad edit, but still no administration
+  const mgr = await mk('mgr', 'mgr@mf.test', [{ project_id: proj, preset: 'manager' }]);
+  ok(await mgr('POST', `/api/projects/${proj}/variations`, { description: 'from manager', amount: 5 }), 201);
+  ok(await mgr('POST', `/api/projects/${proj}/rfis`, { subject: 'from manager' }), 201);
+  ok(await mgr('PATCH', `/api/activities/${ID.a2}`, { start_date: d(12), finish_date: d(18) }));
+  ok(await mgr('GET', '/api/users'), 403);
+  ok(await mgr('PUT', `/api/projects/${proj}/members/${ID.mgr}`, { preset: 'viewer' }), 403);
+  ok(await mgr('PATCH', `/api/projects/${proj}`, { name: 'x' }), 403);
+  const m = (await A('GET', `/api/projects/${proj}`)).json.members.find((x) => x.id === ID.mgr); assert.equal(m.preset, 'manager');
+
+  // 4) levels a section does not offer are normalised (e.g. programme "all" -> none; gantt "all" -> none)
+  let r = await A('PUT', `/api/projects/${proj}/members/${ID.ownEditor}`, { permissions: { programme: 'all', gantt: 'edit', rfis: 'progress' } });
+  ok(r); assert.deepEqual([r.json.member.permissions.programme, r.json.member.permissions.gantt, r.json.member.permissions.rfis], ['none', 'edit', 'none']);
+});

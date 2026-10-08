@@ -261,6 +261,28 @@ async function chooseFiles(page, buttonName, files) {
   await shot(page, 'foreman-restricted');
   await logout(page);
 
+  // ---- upgrade foreman to Site manager preset (edit rights across sections) ----
+  await login(page, 'admin@mf.test', 'AdminPass123');
+  await page.getByText('Hillcrest Warehouse').first().click(); await page.getByText('Manage', { exact: true }).first().click();
+  await page.getByRole('button', { name: 'Access', exact: true }).nth(1).click();
+  ok('editor offers edit levels beyond view (Gantt edit, everyone\'s updates, delete any comment)', await visible(page, 'Edit dates & progress') && await visible(page, "Edit everyone's") && await visible(page, 'Post + delete any'));
+  await page.getByText('Site manager (broad edit)', { exact: true }).last().click();
+  await btn(page, 'Save access').click();
+  ok('preset applied', await visible(page, 'Access saved') && await visible(page, 'Site manager (broad edit)'));
+  await logout(page);
+  await login(page, 'foreman@mf.test', 'ForemanPass123'); await page.getByText('Hillcrest Warehouse').first().click(); await page.waitForTimeout(600);
+  ok('site manager now sees Variations + History + Site updates tabs, still no Manage', (await page.getByText('Variations', { exact: true }).count()) > 0 && (await page.getByText('History', { exact: true }).count()) > 0 && (await page.getByText('Site updates', { exact: true }).count()) > 0 && (await page.getByText('Manage', { exact: true }).count()) === 0);
+  await page.getByText('Programme', { exact: true }).first().click();
+  await page.getByText('Gantt chart', { exact: true }).click(); await page.waitForTimeout(500);
+  await page.getByText('2. Foundations', { exact: false }).first().click();
+  ok('can edit activity dates from the Gantt', await visible(page, 'Edit activity') && await visible(page, 'Finish date'));
+  await page.getByText('×', { exact: true }).last().click();
+  await page.getByText('Variations', { exact: true }).first().click();
+  await btn(page, '+ New variation').click(); await field(page, 'Description').fill('Raised by site manager'); await field(page, 'Value').fill('1500'); await btn(page, 'Save').click();
+  ok('site manager can add a variation', await visible(page, 'Raised by site manager'));
+  await shot(page, 'site-manager-variation');
+  await logout(page);
+
   // ---- admin deletes comment, realtime in 2nd context ----
   await login(page, 'admin@mf.test', 'AdminPass123');
   await page.getByText('Hillcrest Warehouse').first().click(); await page.getByText('Comments', { exact: true }).first().click();

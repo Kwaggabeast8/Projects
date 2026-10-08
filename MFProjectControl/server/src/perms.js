@@ -2,24 +2,26 @@
 //   none     – section hidden and blocked on the server
 //   view     – read only
 //   progress – (programme only) may update activity progress % but not dates / structure
-//   edit     – create / change / delete (site updates & photos: only their own unless admin)
+//   edit     – create / change / delete (site updates, photos: only the ones they created)
+//   all      – as edit, but on everyone's items too (and, for comments / history, delete)
 const SECTIONS = [
   { key: 'programme', label: 'Programme (activity list)', levels: ['none', 'view', 'progress', 'edit'], hint: 'progress = can update % complete only' },
-  { key: 'gantt', label: 'Gantt chart', levels: ['none', 'view'] },
-  { key: 'updates', label: 'Site updates', levels: ['none', 'view', 'edit'], hint: 'edit = add updates and edit their own' },
-  { key: 'photos', label: 'Project photos', levels: ['none', 'view', 'edit'] },
+  { key: 'gantt', label: 'Gantt chart', levels: ['none', 'view', 'edit'], hint: 'edit = can change activity dates / progress from the Gantt' },
+  { key: 'updates', label: 'Site updates', levels: ['none', 'view', 'edit', 'all'], hint: 'edit = add updates, change their own; all = change anyone\'s' },
+  { key: 'photos', label: 'Project photos', levels: ['none', 'view', 'edit', 'all'], hint: 'edit = upload, manage their own; all = manage anyone\'s' },
   { key: 'rfis', label: 'RFIs', levels: ['none', 'view', 'edit'] },
   { key: 'variations', label: 'Variations', levels: ['none', 'view', 'edit'] },
   { key: 'delays', label: 'Delays', levels: ['none', 'view', 'edit'] },
-  { key: 'comments', label: 'Comments', levels: ['none', 'view', 'edit'], hint: 'edit = can post comments' },
-  { key: 'history', label: 'Progress history', levels: ['none', 'view', 'edit'], hint: 'edit = can take snapshots' },
+  { key: 'comments', label: 'Comments', levels: ['none', 'view', 'edit', 'all'], hint: 'edit = can post; all = can also delete any comment' },
+  { key: 'history', label: 'Progress history', levels: ['none', 'view', 'edit', 'all'], hint: 'edit = take snapshots / edit notes; all = can also delete snapshots' },
 ];
-const RANK = { none: 0, view: 1, progress: 2, edit: 3 };
+const RANK = { none: 0, view: 1, progress: 2, edit: 3, all: 4 };
 const KEYS = SECTIONS.map((s) => s.key);
 
 const PRESETS = {
   viewer: { label: 'Viewer / Commenter', programme: 'view', gantt: 'view', updates: 'view', photos: 'view', rfis: 'view', variations: 'view', delays: 'view', comments: 'edit', history: 'view' },
   foreman: { label: 'Foreman (site)', programme: 'progress', gantt: 'view', updates: 'edit', photos: 'edit', rfis: 'view', variations: 'none', delays: 'edit', comments: 'edit', history: 'none' },
+  manager: { label: 'Site manager (broad edit)', programme: 'edit', gantt: 'edit', updates: 'all', photos: 'all', rfis: 'edit', variations: 'edit', delays: 'edit', comments: 'all', history: 'all' },
   client: { label: 'Client (limited)', programme: 'view', gantt: 'view', updates: 'view', photos: 'view', rfis: 'none', variations: 'none', delays: 'none', comments: 'edit', history: 'view' },
 };
 

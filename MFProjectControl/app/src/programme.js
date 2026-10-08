@@ -53,10 +53,10 @@ function ActivityForm({ visible, onClose, activity, acts, projectId, onSaved }) 
 export function ProgrammeTab({ data, pm, reload, projectId }) {
   const { toast } = useUI();
   const has = (k, ...lv) => lv.includes(pm[k]);
-  const canFull = has('programme', 'edit');          // dates, structure, add/delete, reorder
-  const canProgress = has('programme', 'progress', 'edit'); // update % complete
+  const canFull = has('programme', 'edit') || has('gantt', 'edit'); // dates, structure, add/delete, reorder
+  const canProgress = canFull || has('programme', 'progress'); // update % complete
   const showList = has('programme', 'view', 'progress', 'edit');
-  const showGantt = has('gantt', 'view');
+  const showGantt = has('gantt', 'view', 'edit');
   const admin = canFull;
   const [mode, setMode] = useState(showList ? 'table' : 'gantt');
   const [editing, setEditing] = useState(null); // null | 'new' | activity

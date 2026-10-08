@@ -8,7 +8,8 @@ import { Btn, Chips, Muted, Sheet, st, useUI } from './ui';
 const LEVEL = {
   none: 'No access', view: 'View', progress: 'Update progress %', edit: 'Add / edit',
 };
-const EDIT_LABEL = { updates: 'Add & edit own', photos: 'Upload & manage own', comments: 'Can post', history: 'Take snapshots', programme: 'Full edit', delays: 'Add / edit', rfis: 'Add / edit', variations: 'Add / edit' };
+const EDIT_LABEL = { updates: 'Add & edit own', photos: 'Upload & manage own', comments: 'Can post', history: 'Take snapshots', programme: 'Full edit', gantt: 'Edit dates & progress', delays: 'Add / edit', rfis: 'Add / edit', variations: 'Add / edit' };
+const ALL_LABEL = { updates: 'Edit everyone\'s', photos: 'Manage everyone\'s', comments: 'Post + delete any', history: 'Snapshots + delete' };
 
 let metaCache = null;
 export async function accessMeta() {
@@ -44,7 +45,7 @@ export function AccessEditor({ visible, projectId, projectName, member, onClose,
         <View key={s.key} style={{ marginBottom: 14 }}>
           <Text style={{ fontWeight: '800', color: C.navy, marginBottom: 6 }}>{s.label}</Text>
           <Chips value={perms[s.key]} onChange={(v) => setPerms({ ...perms, [s.key]: v })}
-            options={s.levels.map((v) => ({ value: v, label: v === 'edit' ? EDIT_LABEL[s.key] || LEVEL.edit : LEVEL[v] }))} />
+            options={s.levels.map((v) => ({ value: v, label: v === 'all' ? ALL_LABEL[s.key] : v === 'edit' ? EDIT_LABEL[s.key] || LEVEL.edit : LEVEL[v] }))} />
           {!!s.hint && <Muted style={{ fontSize: 12, marginTop: 4 }}>{s.hint}</Muted>}
         </View>
       ))}

@@ -44,7 +44,7 @@ put HTTPS in front of it. All data (SQLite database and photos) lives in `DATA_D
 ## Tests
 
 ```bash
-cd server && npm test            # 25 API tests: every workflow as Admin and Viewer, per-section access (foreman/client/custom), PDF, export, realtime
+cd server && npm test            # 26 API tests: every workflow as Admin and Viewer, per-section access (foreman/client/custom), PDF, export, realtime
 cd e2e && ./fresh.sh && node run.js   # browser test of the real UI (needs the web build + the server)
 ```
 
@@ -53,20 +53,21 @@ cd e2e && ./fresh.sh && node run.js   # browser test of the real UI (needs the w
 * **Team member** – everyone else. They only see projects they are assigned to, and for **each project** the admin chooses, section by section,
   what they can do (Users → tap a project under the person, or project → Manage → Access):
 
-  | Section | Levels |
+  | Section | Levels (each level includes the ones before it) |
   |---|---|
   | Programme (activity list) | No access / View / Update progress % / Full edit |
-  | Gantt chart | No access / View |
-  | Site updates | No access / View / Add & edit own |
-  | Project photos | No access / View / Upload & manage own |
+  | Gantt chart | No access / View / Edit dates & progress |
+  | Site updates | No access / View / Add & edit own / Edit everyone's |
+  | Project photos | No access / View / Upload & manage own / Manage everyone's |
   | RFIs, Variations, Delays | No access / View / Add / edit |
-  | Comments | No access / View / Can post |
-  | Progress history | No access / View / Take snapshots |
+  | Comments | No access / View / Can post / Post + delete any |
+  | Progress history | No access / View / Take snapshots / Snapshots + delete |
 
   Quick presets: **Viewer / Commenter**, **Foreman (site)** (update progress %, add site updates + photos, record delays, view Gantt/RFIs, no variations),
+  **Site manager (broad edit)** (edit the programme and Gantt, everyone's updates/photos/comments/snapshots, RFIs, variations, delays),
   **Client (limited)** (programme, Gantt, updates, photos, history, comments; no RFIs/variations/delays) – then adjust any section ("Custom").
   Sections set to *No access* disappear from the app and the server returns nothing for them (including photo URLs). Every check is enforced on the server (403).
-  Users with edit access to site updates / photos can only change the ones they created. Reports, export, audit log, user and project administration stay admin-only.
+  With *edit* on site updates / photos people can only change the ones they created; *everyone's* lets them change anyone's. Reports, export, audit log, and user / project administration stay admin-only.
 
 ## Notes
 * Planned progress is calculated from activity dates (linear between start and finish; milestones are 0 → 100 on their date);

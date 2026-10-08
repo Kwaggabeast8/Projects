@@ -277,23 +277,126 @@ input:focus, textarea:focus, select:focus { border-color: var(--color-accent); o
   .field-row { grid-template-columns: 1fr; }
   .perks { grid-template-columns: 1fr; }
 }
+
+/* Brand placeholder tub + hero glow */
+.card__placeholder .tub { width: 70%; max-width: 280px; height: auto; filter: drop-shadow(0 12px 24px rgba(0,0,0,.6)); transition: transform .3s; }
+.card:hover .tub { transform: translateY(-6px) scale(1.04); }
+.hero__glow { position: absolute; width: 70vmin; height: 70vmin; right: 8%; top: 50%; translate: 0 -50%; border-radius: 50%; background: radial-gradient(circle, rgba(225,6,0,.55), rgba(225,6,0,0) 65%); filter: blur(20px); animation: glow 6s ease-in-out infinite alternate; }
+@keyframes glow { to { transform: scale(1.15); opacity: .7; } }
+@media (prefers-reduced-motion: reduce) { .hero__glow { animation: none; } }
 </style></head><body><div class="announcement">FREE SHIPPING ON ORDERS OVER $75</div>
 <header class="header"><div class="container header__inner">
 <nav class="header__nav"><a href="#">Shop</a><a href="#">Stacks</a><a href="#">Our Story</a></nav>
 <a class="header__logo" href="#"><span class="logo-text">MAD<span>HAUS</span> <small>NUTRITION</small></span></a>
 <div class="header__icons"><a href="#">Search</a><a href="#" class="header__cart">Cart <span class="cart-count">2</span></a></div></div></header>
 <main>
-<section class="hero" style="--overlay:.6"><div class="container hero__content">
+<section class="hero" style="--overlay:.6"><div class="hero__glow"></div><div class="container hero__content">
 <p class="eyebrow">NEW DROP</p><h1>FUEL THE MADNESS</h1>
 <p class="hero__sub">Clean, high-performance nutrition for people who train hard.</p>
 <div class="hero__buttons"><a class="btn" href="#">Shop now</a><a class="btn btn--ghost" href="#">Best sellers</a></div></div></section>
 <div class="marquee"><div class="marquee__track"><div class="marquee__group"><span>NO FILLERS</span><i>◆</i><span>NO EXCUSES</span><i>◆</i><span>LAB TESTED</span><i>◆</i><span>MADE FOR THE GRIND</span><i>◆</i><span>NO FILLERS</span><i>◆</i><span>NO EXCUSES</span><i>◆</i><span>LAB TESTED</span><i>◆</i></div></div></div>
 <section class="section"><div class="container"><div class="section__head"><h2>BEST SELLERS</h2><a class="link-arrow" href="#">View all →</a></div>
 <div class="grid">
-<article class="card"><a class="card__media"><div class="card__placeholder">WHEY</div><span class="badge">SALE</span></a><div class="card__body"><h3 class="card__title">Mad Whey Isolate</h3><div class="price"><span class="price__current">$44.99</span><s class="price__compare">$54.99</s></div></div></article>
-<article class="card"><a class="card__media"><div class="card__placeholder">PRE</div></a><div class="card__body"><h3 class="card__title">Mayhem Pre-Workout</h3><div class="price"><span class="price__current">$39.99</span></div></div></article>
-<article class="card"><a class="card__media"><div class="card__placeholder">CREATINE</div></a><div class="card__body"><h3 class="card__title">Creatine Monohydrate</h3><div class="price"><span class="price__current">$24.99</span></div></div></article>
-<article class="card"><a class="card__media"><div class="card__placeholder">AMINOS</div><span class="badge badge--out">SOLD OUT</span></a><div class="card__body"><h3 class="card__title">EAA Recovery</h3><div class="price"><span class="price__current">From $29.99</span></div></div></article>
+<article class="card"><a class="card__media"><div class="card__placeholder"><svg class="tub" viewBox="0 0 200 250" role="img" aria-label="Madhaus Nutrition product" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tub-shine" x1="0" x2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".18"/>
+      <stop offset=".35" stop-color="#fff" stop-opacity=".02"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".35"/>
+    </linearGradient>
+    <radialGradient id="tub-glow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#e10600" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#e10600" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="100" cy="150" rx="98" ry="98" fill="url(#tub-glow)"/>
+  <ellipse cx="100" cy="238" rx="68" ry="7" fill="#000" opacity=".6"/>
+  <rect x="42" y="22" width="116" height="30" rx="6" fill="#0d0d0d" stroke="#2a2a2a"/>
+  <rect x="42" y="42" width="116" height="5" fill="#e10600"/>
+  <rect x="36" y="52" width="128" height="180" rx="10" fill="#111" stroke="#2a2a2a"/>
+  <rect x="36" y="92" width="128" height="86" fill="#e10600"/>
+  <text x="100" y="128" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="26" fill="#fff" letter-spacing="1">MADHAUS</text>
+  <text x="100" y="146" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="8" fill="#fff" letter-spacing="4">NUTRITION</text>
+  <text x="100" y="166" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="9" fill="#0a0a0a" letter-spacing="2">WHEY</text>
+  <rect x="36" y="178" width="128" height="3" fill="#c8ff00"/>
+  <rect x="36" y="52" width="128" height="180" rx="10" fill="url(#tub-shine)"/>
+</svg>
+</div><span class="badge">SALE</span></a><div class="card__body"><h3 class="card__title">Mad Whey Isolate</h3><div class="price"><span class="price__current">$44.99</span><s class="price__compare">$54.99</s></div></div></article>
+<article class="card"><a class="card__media"><div class="card__placeholder"><svg class="tub" viewBox="0 0 200 250" role="img" aria-label="Madhaus Nutrition product" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tub-shine" x1="0" x2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".18"/>
+      <stop offset=".35" stop-color="#fff" stop-opacity=".02"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".35"/>
+    </linearGradient>
+    <radialGradient id="tub-glow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#e10600" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#e10600" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="100" cy="150" rx="98" ry="98" fill="url(#tub-glow)"/>
+  <ellipse cx="100" cy="238" rx="68" ry="7" fill="#000" opacity=".6"/>
+  <rect x="42" y="22" width="116" height="30" rx="6" fill="#0d0d0d" stroke="#2a2a2a"/>
+  <rect x="42" y="42" width="116" height="5" fill="#e10600"/>
+  <rect x="36" y="52" width="128" height="180" rx="10" fill="#111" stroke="#2a2a2a"/>
+  <rect x="36" y="92" width="128" height="86" fill="#e10600"/>
+  <text x="100" y="128" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="26" fill="#fff" letter-spacing="1">MADHAUS</text>
+  <text x="100" y="146" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="8" fill="#fff" letter-spacing="4">NUTRITION</text>
+  <text x="100" y="166" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="9" fill="#0a0a0a" letter-spacing="2">PRE-WORKOUT</text>
+  <rect x="36" y="178" width="128" height="3" fill="#c8ff00"/>
+  <rect x="36" y="52" width="128" height="180" rx="10" fill="url(#tub-shine)"/>
+</svg>
+</div></a><div class="card__body"><h3 class="card__title">Mayhem Pre-Workout</h3><div class="price"><span class="price__current">$39.99</span></div></div></article>
+<article class="card"><a class="card__media"><div class="card__placeholder"><svg class="tub" viewBox="0 0 200 250" role="img" aria-label="Madhaus Nutrition product" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tub-shine" x1="0" x2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".18"/>
+      <stop offset=".35" stop-color="#fff" stop-opacity=".02"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".35"/>
+    </linearGradient>
+    <radialGradient id="tub-glow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#e10600" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#e10600" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="100" cy="150" rx="98" ry="98" fill="url(#tub-glow)"/>
+  <ellipse cx="100" cy="238" rx="68" ry="7" fill="#000" opacity=".6"/>
+  <rect x="42" y="22" width="116" height="30" rx="6" fill="#0d0d0d" stroke="#2a2a2a"/>
+  <rect x="42" y="42" width="116" height="5" fill="#e10600"/>
+  <rect x="36" y="52" width="128" height="180" rx="10" fill="#111" stroke="#2a2a2a"/>
+  <rect x="36" y="92" width="128" height="86" fill="#e10600"/>
+  <text x="100" y="128" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="26" fill="#fff" letter-spacing="1">MADHAUS</text>
+  <text x="100" y="146" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="8" fill="#fff" letter-spacing="4">NUTRITION</text>
+  <text x="100" y="166" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="9" fill="#0a0a0a" letter-spacing="2">CREATINE</text>
+  <rect x="36" y="178" width="128" height="3" fill="#c8ff00"/>
+  <rect x="36" y="52" width="128" height="180" rx="10" fill="url(#tub-shine)"/>
+</svg>
+</div></a><div class="card__body"><h3 class="card__title">Creatine Monohydrate</h3><div class="price"><span class="price__current">$24.99</span></div></div></article>
+<article class="card"><a class="card__media"><div class="card__placeholder"><svg class="tub" viewBox="0 0 200 250" role="img" aria-label="Madhaus Nutrition product" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tub-shine" x1="0" x2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".18"/>
+      <stop offset=".35" stop-color="#fff" stop-opacity=".02"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".35"/>
+    </linearGradient>
+    <radialGradient id="tub-glow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#e10600" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#e10600" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="100" cy="150" rx="98" ry="98" fill="url(#tub-glow)"/>
+  <ellipse cx="100" cy="238" rx="68" ry="7" fill="#000" opacity=".6"/>
+  <rect x="42" y="22" width="116" height="30" rx="6" fill="#0d0d0d" stroke="#2a2a2a"/>
+  <rect x="42" y="42" width="116" height="5" fill="#e10600"/>
+  <rect x="36" y="52" width="128" height="180" rx="10" fill="#111" stroke="#2a2a2a"/>
+  <rect x="36" y="92" width="128" height="86" fill="#e10600"/>
+  <text x="100" y="128" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="26" fill="#fff" letter-spacing="1">MADHAUS</text>
+  <text x="100" y="146" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="8" fill="#fff" letter-spacing="4">NUTRITION</text>
+  <text x="100" y="166" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="9" fill="#0a0a0a" letter-spacing="2">AMINOS</text>
+  <rect x="36" y="178" width="128" height="3" fill="#c8ff00"/>
+  <rect x="36" y="52" width="128" height="180" rx="10" fill="url(#tub-shine)"/>
+</svg>
+</div><span class="badge badge--out">SOLD OUT</span></a><div class="card__body"><h3 class="card__title">EAA Recovery</h3><div class="price"><span class="price__current">From $29.99</span></div></div></article>
 </div></div></section>
 <section class="section section--surface"><div class="container benefits">
 <div class="benefit"><h3>CLEAN FORMULAS</h3><p>Full-dose ingredients. No proprietary blends.</p></div>

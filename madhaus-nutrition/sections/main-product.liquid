@@ -11,7 +11,7 @@
           {%- endif -%}
         </div>
       {%- else -%}
-        <div class="product__img product__img--main"><div class="card__placeholder">MADHAUS</div></div>
+        <div class="product__img product__img--main"><div class="card__placeholder">{% render 'tub', label: product.type %}</div></div>
       {%- endfor -%}
     </div>
 

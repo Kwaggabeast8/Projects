@@ -1,6 +1,10 @@
 <section class="hero" style="--overlay: {{ section.settings.overlay | divided_by: 100.0 }};">
-  {%- if section.settings.image != blank -%}
+  {%- if section.settings.video != blank -%}
+    {{ section.settings.video | video_tag: class: 'hero__bg', autoplay: true, loop: true, muted: true, controls: false, playsinline: true, image_size: '1920x', preload: 'metadata' }}
+  {%- elsif section.settings.image != blank -%}
     {{ section.settings.image | image_url: width: 2000 | image_tag: class: 'hero__bg', loading: 'eager', widths: '800, 1200, 1600, 2000', sizes: '100vw' }}
+  {%- else -%}
+    <div class="hero__glow" aria-hidden="true"></div>
   {%- endif -%}
   <div class="container hero__content">
     {%- if section.settings.eyebrow != blank -%}<p class="eyebrow">{{ section.settings.eyebrow }}</p>{%- endif -%}
@@ -21,6 +25,7 @@
 {
   "name": "Hero",
   "settings": [
+    { "type": "video", "id": "video", "label": "Background video (optional)", "info": "Short looping MP4, under 15 seconds. Used instead of the image if set." },
     { "type": "image_picker", "id": "image", "label": "Background image" },
     { "type": "range", "id": "overlay", "min": 0, "max": 90, "step": 5, "unit": "%", "label": "Dark overlay", "default": 60 },
     { "type": "text", "id": "eyebrow", "label": "Small text", "default": "NEW DROP" },

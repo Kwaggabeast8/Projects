@@ -4,7 +4,7 @@
     {%- if product.featured_media -%}
       {{ product.featured_media | image_url: width: 600 | image_tag: loading: 'lazy', widths: '300, 450, 600', sizes: '(min-width: 900px) 25vw, 50vw', alt: product.featured_media.alt }}
     {%- else -%}
-      <div class="card__placeholder">MADHAUS</div>
+      <div class="card__placeholder">{% render 'tub', label: product.type %}</div>
     {%- endif -%}
     {%- if product.compare_at_price > product.price -%}<span class="badge">SALE</span>{%- endif -%}
     {%- unless product.available -%}<span class="badge badge--out">SOLD OUT</span>{%- endunless -%}

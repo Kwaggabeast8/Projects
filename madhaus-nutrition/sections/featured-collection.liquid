@@ -11,7 +11,7 @@
         {% render 'product-card', product: product %}
       {%- else -%}
         {%- for i in (1..4) -%}
-          <article class="card"><div class="card__media"><div class="card__placeholder">MADHAUS</div></div>
+          <article class="card"><div class="card__media"><div class="card__placeholder">{% render 'tub' %}</div></div>
           <div class="card__body"><h3 class="card__title">Your product</h3><div class="price"><span class="price__current">$0.00</span></div></div></article>
         {%- endfor -%}
       {%- endfor -%}

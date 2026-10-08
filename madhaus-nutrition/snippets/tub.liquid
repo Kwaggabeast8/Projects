@@ -1,0 +1,29 @@
+{%- comment -%}
+  Brand placeholder shown when a product has no photo yet.
+  Usage: {% render 'tub', label: product.type %}
+{%- endcomment -%}
+{%- assign tub_label = label | default: 'PERFORMANCE' | upcase | truncate: 14, '' -%}
+<svg class="tub" viewBox="0 0 200 250" role="img" aria-label="Madhaus Nutrition product" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tub-shine" x1="0" x2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".18"/>
+      <stop offset=".35" stop-color="#fff" stop-opacity=".02"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".35"/>
+    </linearGradient>
+    <radialGradient id="tub-glow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#e10600" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#e10600" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="100" cy="150" rx="98" ry="98" fill="url(#tub-glow)"/>
+  <ellipse cx="100" cy="238" rx="68" ry="7" fill="#000" opacity=".6"/>
+  <rect x="42" y="22" width="116" height="30" rx="6" fill="#0d0d0d" stroke="#2a2a2a"/>
+  <rect x="42" y="42" width="116" height="5" fill="#e10600"/>
+  <rect x="36" y="52" width="128" height="180" rx="10" fill="#111" stroke="#2a2a2a"/>
+  <rect x="36" y="92" width="128" height="86" fill="#e10600"/>
+  <text x="100" y="128" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="26" fill="#fff" letter-spacing="1">MADHAUS</text>
+  <text x="100" y="146" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="8" fill="#fff" letter-spacing="4">NUTRITION</text>
+  <text x="100" y="166" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="9" fill="#0a0a0a" letter-spacing="2">{{ tub_label }}</text>
+  <rect x="36" y="178" width="128" height="3" fill="#c8ff00"/>
+  <rect x="36" y="52" width="128" height="180" rx="10" fill="url(#tub-shine)"/>
+</svg>

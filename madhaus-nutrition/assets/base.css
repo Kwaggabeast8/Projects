@@ -277,3 +277,10 @@ input:focus, textarea:focus, select:focus { border-color: var(--color-accent); o
   .field-row { grid-template-columns: 1fr; }
   .perks { grid-template-columns: 1fr; }
 }
+
+/* Brand placeholder tub + hero glow */
+.card__placeholder .tub { width: 70%; max-width: 280px; height: auto; filter: drop-shadow(0 12px 24px rgba(0,0,0,.6)); transition: transform .3s; }
+.card:hover .tub { transform: translateY(-6px) scale(1.04); }
+.hero__glow { position: absolute; width: 70vmin; height: 70vmin; right: 8%; top: 50%; translate: 0 -50%; border-radius: 50%; background: radial-gradient(circle, rgba(225,6,0,.55), rgba(225,6,0,0) 65%); filter: blur(20px); animation: glow 6s ease-in-out infinite alternate; }
+@keyframes glow { to { transform: scale(1.15); opacity: .7; } }
+@media (prefers-reduced-motion: reduce) { .hero__glow { animation: none; } }

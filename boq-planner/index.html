@@ -136,7 +136,7 @@ details summary{cursor:pointer;font-family:var(--f-display);font-size:18px;font-
 <body>
 <div class="wrap" id="app"></div>
 <div class="toast" id="toast" hidden></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="config.js"></script>
 <script>
 /* ================= constants ================= */
 const PHASES=[
@@ -228,7 +228,49 @@ function waNumber(p){let d=String(p).replace(/\D/g,'');if(d.startsWith('0'))d='2
 const LS='boqplanner.v1';
 let store=null,mem=null;
 function loadStore(){try{const t=localStorage.getItem(LS);if(t)return JSON.parse(t)}catch(e){}return null}
-function saveStore(){mem=store;try{localStorage.setItem(LS,JSON.stringify(store))}catch(e){}}
+function saveStore(){store.updatedAt=new Date().toISOString();mem=store;try{localStorage.setItem(LS,JSON.stringify(store))}catch(e){}
+  if(cloudOn()&&sess&&pro()){clearTimeout(saveStore.t);saveStore.t=setTimeout(()=>pushWorkspace().catch(()=>{}),2500)}}
+
+/* ---- optional online accounts and sync (Supabase). Off unless config.js is filled in. ---- */
+const CFG=window.BOQ_CONFIG||{};
+const cloudOn=()=>!!(CFG.supabaseUrl&&CFG.supabaseAnonKey);
+let sess=null;
+try{sess=JSON.parse(localStorage.getItem('boq.session')||'null')}catch(e){}
+function setSess(x){sess=x;try{x?localStorage.setItem('boq.session',JSON.stringify(x)):localStorage.removeItem('boq.session')}catch(e){}}
+async function sbFetch(path,opts={},auth=true){
+  if(auth&&sess&&sess.expires_at*1000<Date.now()+60000)await refreshSess();
+  const h={apikey:CFG.supabaseAnonKey,'Content-Type':'application/json',Authorization:'Bearer '+(auth&&sess?sess.access_token:CFG.supabaseAnonKey),...(opts.headers||{})};
+  const r=await fetch(CFG.supabaseUrl+path,{...opts,headers:h});
+  const t=await r.text();let j=null;try{j=t?JSON.parse(t):null}catch(e){}
+  if(!r.ok)throw new Error((j&&(j.msg||j.message||j.error_description||j.error))||('Request failed ('+r.status+')'));
+  return j;
+}
+async function refreshSess(){
+  try{const j=await sbFetch('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:JSON.stringify({refresh_token:sess.refresh_token})},false);setSess({...j,expires_at:Math.floor(Date.now()/1000)+j.expires_in})}
+  catch(e){setSess(null)}
+}
+async function authCall(kind,email,pw){
+  const path=kind==='up'?'/auth/v1/signup':'/auth/v1/token?grant_type=password';
+  const j=await sbFetch(path,{method:'POST',body:JSON.stringify({email,password:pw})},false);
+  if(!j.access_token)return 'confirm';
+  setSess({...j,expires_at:Math.floor(Date.now()/1000)+j.expires_in});await afterLogin();return 'ok';
+}
+async function afterLogin(){
+  const rows=await sbFetch('/rest/v1/profiles?select=plan&user_id=eq.'+sess.user.id);
+  store.plan=(rows&&rows[0]&&rows[0].plan)||'free';
+  if(pro())await pullWorkspace();
+  try{localStorage.setItem(LS,JSON.stringify(store))}catch(e){}
+}
+async function pullWorkspace(){
+  const rows=await sbFetch('/rest/v1/workspaces?select=data,updated_at&user_id=eq.'+sess.user.id);
+  const row=rows&&rows[0];
+  if(row&&new Date(row.updated_at)>new Date(store.updatedAt||0)){const keep=store.plan;store=row.data;store.plan=keep;store.updatedAt=row.updated_at;if(!store.projects.some(p=>p.id===store.cur))store.cur=store.projects[0].id}
+  else await pushWorkspace();
+}
+async function pushWorkspace(){
+  const {plan,...data}=store;
+  await sbFetch('/rest/v1/workspaces?on_conflict=user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:sess.user.id,data,updated_at:store.updatedAt})});
+}
 function blankProject(name){return {id:uid(),name:name||'New project',client:'',site:'',lat:null,lon:null,start:nextMonday(),pace:1,weather:true,xmas:true,radius:25,markup:15,overhead:14500,delay:0,vat:true,status:8,sample:false,items:[],quotes:{},actual:{},variations:[],phaseDays:{},rfq:{}}}
 function nextMonday(){const d=new Date();d.setDate(d.getDate()+((8-d.getDay())%7||7));return d.toISOString().slice(0,10)}
 function sampleSuppliers(){return SAMPLE_SUPS.map((s,i)=>({id:'sam'+i,name:s[0],area:s[1],km:s[2],phone:s[3],email:s[4],lead:s[5],cats:s[6],sample:true}))}
@@ -290,12 +332,89 @@ async function readFileRows(file){
   const ext=(file.name.split('.').pop()||'').toLowerCase();
   if(['csv','tsv','txt'].includes(ext))return parseCSV(await file.text());
   if(['xlsx','xls','xlsm'].includes(ext)){
-    if(!window.XLSX)throw new Error('The Excel reader did not load. Check your internet connection once, or save the sheet as CSV.');
+    try{await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js')}catch(e){throw new Error('The Excel reader could not be loaded. Check your internet connection, or save the sheet as CSV.')}
     const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
     let best=[];wb.SheetNames.forEach(n=>{const r=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''});if(r.length>best.length)best=r});
     return best.filter(r=>r.some(c=>String(c).trim()!==''));
   }
-  throw new Error('PDF, Word and photo files cannot be read yet. Open the file, copy the table, and paste it below, or save it as Excel or CSV.');
+  throw new Error('Price lists can be Excel, CSV or pasted text.');
+}
+
+/* ---- PDF, Word and photo readers (free libraries, loaded only when needed) ---- */
+const LIBS={
+  pdf:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+  pdfWorker:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+  mammoth:'https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js',
+  tess:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
+  lang:'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int'
+};
+const _loaded={};
+function loadScript(u){return _loaded[u]||(_loaded[u]=new Promise((res,rej)=>{const e=document.createElement('script');e.src=u;e.onload=res;e.onerror=()=>{delete _loaded[u];rej(new Error('A reading helper could not be loaded. Check your internet connection and try again.'))};document.head.appendChild(e)}))}
+function progress(m){ui.impBusy=m;render()}
+const UNITS=new Set(['m','m2','m²','m3','m³','no','no.','nr','sum','item','bag','bags','roll','rolls','kg','t','l','ea','each','lm','hr','hrs','day','days','set','pair','pc','pcs','sqm','cum','mm','ton','tons','week','weeks','allow','ps','prov']);
+function linesToItems(lines){
+  const out=[];
+  lines.forEach(line=>{
+    let tk=String(line).replace(/ /g,' ').trim().split(/\s+/).filter(Boolean);if(tk.length<3)return;
+    const nums=[];while(tk.length>1&&nums.length<3&&num(tk[tk.length-1])!==null&&!/^[A-Za-z]/.test(tk[tk.length-1].replace(/^R/i,'')))nums.unshift(num(tk.pop()));
+    if(nums.length<2)return;
+    let unit='no.';if(tk.length>1&&UNITS.has(tk[tk.length-1].toLowerCase().replace(/[^a-z0-9²³.]/g,'')))unit=tk.pop().replace(/m2$/,'m²').replace(/m3$/,'m³');
+    if(tk.length>1&&/^[A-Za-z]?\d+(\.\d+)*[.)]?$|^[A-Z]{1,2}\d*[.)]?$/.test(tk[0])&&tk.length>2)tk.shift();
+    const desc=tk.join(' ').replace(/[.…_]{3,}/g,'').trim();
+    if(desc.length<3||!/[A-Za-z]{2}/.test(desc))return;
+    let qty,rate;if(nums.length===3){qty=nums[0];rate=nums[1]}else{qty=nums[0];rate=nums[1]}
+    if(!(qty>0))return;
+    out.push({id:'i'+uid(),desc,unit,qty,rate:rate||0,...guess(desc)});
+  });
+  return out;
+}
+async function pdfLines(buf,onPage){
+  await loadScript(LIBS.pdf);
+  try{const t=await (await fetch(LIBS.pdfWorker)).text();pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([t],{type:'text/javascript'}))}catch(e){pdfjsLib.GlobalWorkerOptions.workerSrc=LIBS.pdfWorker}
+  const doc=await pdfjsLib.getDocument({data:buf}).promise;const lines=[];const pages=[];
+  for(let n=1;n<=doc.numPages;n++){
+    const pg=await doc.getPage(n);const tc=await pg.getTextContent();
+    const rows=[];tc.items.forEach(it=>{if(!it.str.trim())return;const y=it.transform[5],x=it.transform[4];let r=rows.find(r=>Math.abs(r.y-y)<3);if(!r){r={y,cells:[]};rows.push(r)}r.cells.push({x,t:it.str})});
+    rows.sort((a,b)=>b.y-a.y).forEach(r=>lines.push(r.cells.sort((a,b)=>a.x-b.x).map(c=>c.t.trim()).join(' ')));
+    pages.push(pg);if(onPage)onPage(n,doc.numPages);
+  }
+  return {lines,pages};
+}
+async function ocrWorker(){
+  await loadScript(LIBS.tess);
+  return await Promise.race([Tesseract.createWorker('eng',1,{langPath:LIBS.lang,logger:m=>{if(m.status==='recognizing text')progress('Reading the text… '+Math.round(m.progress*100)+'%')}}),new Promise((_,r)=>setTimeout(()=>r(new Error('Text recognition could not start. It needs an internet connection the first time, and may not run inside this preview.')),60000))]);
+}
+async function extractItems(file){
+  const ext=(file.name.split('.').pop()||'').toLowerCase();
+  if(['csv','tsv','txt','xlsx','xls','xlsm'].includes(ext)){const m=mapBOQ(await readFileRows(file));return m}
+  if(ext==='docx'){
+    await loadScript(LIBS.mammoth);progress('Reading the Word file…');
+    const r=await mammoth.convertToHtml({arrayBuffer:await file.arrayBuffer()});
+    const doc=new DOMParser().parseFromString(r.value,'text/html');
+    const tables=[...doc.querySelectorAll('table')].map(t=>[...t.querySelectorAll('tr')].map(tr=>[...tr.children].map(c=>c.textContent.trim())));
+    let items=[];tables.forEach(t=>{const m=mapBOQ(t);items=items.concat(m.items)});
+    if(items.length)return {items,note:'Read from the tables in the Word file. Check the quantities and rates.'};
+    return {items:linesToItems([...doc.querySelectorAll('p,li')].map(p=>p.textContent)),note:'Read from the text in the Word file. Check the quantities and rates.'};
+  }
+  if(ext==='pdf'){
+    progress('Opening the PDF…');
+    const buf=await file.arrayBuffer();
+    const {lines,pages}=await pdfLines(buf,(n,t)=>progress('Reading PDF page '+n+' of '+t+'…'));
+    let items=linesToItems(lines);
+    if(items.length)return {items,note:'Read from the text in the PDF. Check the quantities and rates.'};
+    if(lines.join('').length>200)return {items:[],note:''};
+    progress('This PDF is a scan. Starting text recognition…');
+    const w=await ocrWorker();let all=[];
+    for(let n=0;n<pages.length;n++){const vp=pages[n].getViewport({scale:2.2});const cv=document.createElement('canvas');cv.width=vp.width;cv.height=vp.height;await pages[n].render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;const r=await w.recognize(cv);all=all.concat(r.data.text.split('\n'))}
+    await w.terminate();
+    return {items:linesToItems(all),note:'Read from a scanned PDF using text recognition. Check every quantity and rate.'};
+  }
+  if(['jpg','jpeg','png','webp','bmp','gif'].includes(ext)){
+    progress('Starting text recognition…');
+    const w=await ocrWorker();const r=await w.recognize(file);await w.terminate();
+    return {items:linesToItems(r.data.text.split('\n')),note:'Read from a photo using text recognition. Check every quantity and rate.'};
+  }
+  throw new Error('That file type cannot be read. Use Excel, CSV, PDF, Word or a photo.');
 }
 
 /* ================= calculations ================= */
@@ -381,7 +500,7 @@ function chartSVG(P,c){
 }
 
 /* ================= ui state ================= */
-let ui={tab:'boq',view:'app',confirm:'',imp:null,impMsg:'',pimp:null,pimpMsg:'',pimpSup:'',rfq:null,geoMsg:''};
+let ui={tab:'boq',view:'app',confirm:'',imp:null,impMsg:'',impBusy:'',accMsg:'',accErr:false,pimp:null,pimpMsg:'',pimpSup:'',rfq:null,geoMsg:''};
 const TABS=[['boq','Read the BOQ'],['prog','Programme'],['sup','Best suppliers'],['pri','Prices'],['pl','Profit and loss'],['rep','Report']];
 
 /* ================= views ================= */
@@ -436,10 +555,11 @@ function tabBOQ(P,c){
    <label class="field" style="min-width:180px;flex:1">Client${inp('id="p_client" data-k="client" data-nr="1"',P.client)}</label>
    <label class="field" style="min-width:220px;flex:1">Site (suburb or town)${inp('id="p_site" data-k="site" data-nr="1"',P.site)}</label></div>
   <h2 style="margin-top:22px">Bill of quantities</h2>
-  <p class="hint">Bring in your BOQ from Excel or CSV, or paste the table. Each line is placed in a work section and a supplier category, which builds the programme and the supplier search. Check them and change any that are wrong.</p>
+  <p class="hint">Bring in your BOQ from Excel or CSV, or paste the table. PDFs, Word files and photos are read with text recognition, so check every quantity and rate before importing. Each line is placed in a work section and a supplier category, which builds the programme and the supplier search. Check them and change any that are wrong.</p>
   <div class="drop"><div class="row" style="align-items:center">
-   <label class="btn primary" for="boqfile">Choose BOQ file</label><input id="boqfile" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsm,.pdf,.docx,.jpg,.jpeg,.png" style="position:absolute;opacity:0;width:1px;height:1px">
-   <span class="small muted">Excel, CSV or text. Everything stays on this device.</span></div>
+   <label class="btn primary" for="boqfile">Choose BOQ file</label><input id="boqfile" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsm,.pdf,.docx,.jpg,.jpeg,.png,.webp" style="position:absolute;opacity:0;width:1px;height:1px">
+   <span class="small muted">Excel, CSV, PDF, Word, or a photo of a printed BOQ. The file is read on your device and not uploaded.</span></div>
+   ${ui.impBusy?`<p class="small" style="margin:10px 0 0;color:var(--accent)">${esc(ui.impBusy)}</p>`:''}
    ${ui.impMsg?`<p class="small neg" style="margin:10px 0 0">${esc(ui.impMsg)}</p>`:''}
    <details style="margin:8px 0 0"><summary style="font-size:15px;margin-block:8px">Or paste a table</summary>
    <textarea id="pastebox" rows="5" style="width:100%;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px;font-family:var(--f-mono);font-size:12.5px;color:var(--ink)" placeholder="Description, Unit, Qty, Rate&#10;Excavate trenches, m3, 42, 185"></textarea>
@@ -673,14 +793,19 @@ function viewProjects(){
 function viewPlans(){
   const p=store.plan;
   const card=(id,name,price,feat,note)=>`<div class="plan ${p===id?'on':''}"><div class="eyebrow">${name}</div><div class="price">${price}</div><ul>${feat.map(f=>`<li>${f}</li>`).join('')}</ul><div style="flex:1"></div>${note?`<p class="small muted" style="margin:0">${note}</p>`:''}
-   <button class="btn ${p===id?'':'primary'}" data-act="plan" data-arg="${id}" type="button" ${p===id?'disabled':''}>${p===id?'Your plan':(id==='free'?'Switch to Free':'Try '+name+' (demo)')}</button></div>`;
+   ${cloudOn()?(id==='free'||p===id?`<button class="btn" type="button" disabled>${p===id?'Your plan':'Included'}</button>`:`<button class="btn primary" data-act="subscribe" data-arg="${id}" type="button" ${sess?'':'disabled'}>${sess?'Subscribe to '+name:'Sign in to subscribe'}</button>`):`<button class="btn ${p===id?'':'primary'}" data-act="plan" data-arg="${id}" type="button" ${p===id?'disabled':''}>${p===id?'Your plan':(id==='free'?'Switch to Free':'Try '+name+' (demo)')}</button>`}</div>`;
   return `<div class="panel solo"><div class="row" style="justify-content:space-between;align-items:center"><h2>Plans</h2><button class="btn" data-act="view" data-arg="app" type="button">Back</button></div>
-  <p class="hint">Prices are placeholders to show how the plans will look. Buttons here switch plans for testing only. No payment is taken.</p>
+  ${cloudOn()?'':'<p class="hint">Prices are placeholders to show how the plans will look. Buttons here switch plans for testing only. No payment is taken.</p>'}
   <div class="plans">
    ${card('free','Free','R0',['1 project','BOQ import from Excel, CSV or paste','Programme and critical path','Supplier ranking and quote emails','Profit and loss with variations','Copy summary'],'')}
    ${card('pro','Pro','R249<span style="font-size:16px"> /month</span>',['Unlimited projects','Supplier price-list import','Print and PDF reports','CSV exports','Backups and project copies','Priority support'],'Planned price. Billed monthly, cancel any time.')}
    ${card('business','Business','R599<span style="font-size:16px"> /month</span>',['Everything in Pro','Up to 5 team members','Shared supplier book','Company logo on reports','Cloud sync across devices'],'Planned. Needs the online version (accounts and sync).')}
-  </div></div>`;
+  </div>${accountCard()}</div>`;
+}
+function accountCard(){
+  if(!cloudOn())return `<div class="card"><h3>Online account</h3><p class="hint" style="margin-bottom:0">Online accounts and sync are not switched on in this copy. Your data stays on this device. The setup steps are in SETUP.md.</p></div>`;
+  if(sess)return `<div class="card"><h3>Online account</h3><p>Signed in as <b>${esc(sess.user.email)}</b> · plan <b>${esc(store.plan)}</b></p><p class="hint">${pro()?'Your projects sync to your account when you change them.':'Cloud sync is part of Pro. Subscribe above to turn it on.'}</p>${ui.accMsg?`<p class="small ${ui.accErr?'neg':'pos'}">${esc(ui.accMsg)}</p>`:''}<div class="row">${pro()?'<button class="btn" data-act="syncNow" type="button">Sync now</button>':''}<button class="btn" data-act="refreshPlan" type="button">Refresh my plan</button><button class="btn" data-act="signOut" type="button">Sign out</button></div></div>`;
+  return `<div class="card"><h3>Sign in or create an account</h3><p class="hint">Free works without an account. An account is needed for Pro and cloud sync.</p>${ui.accMsg?`<p class="small ${ui.accErr?'neg':'pos'}">${esc(ui.accMsg)}</p>`:''}<div class="row"><label class="field" style="min-width:240px">Email<input type="text" id="acc_email" autocomplete="email"></label><label class="field" style="min-width:200px">Password<input type="password" id="acc_pw" autocomplete="current-password" style="background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:14px"></label><button class="btn primary" data-act="signIn" type="button">Sign in</button><button class="btn" data-act="signUp" type="button">Create account</button></div></div>`;
 }
 
 /* ================= render ================= */
@@ -729,12 +854,12 @@ document.addEventListener('change',e=>{
   if(t.dataset.ui==='impMode'&&ui.imp)ui.imp.mode=t.value;
 });
 async function handleBOQFile(f){
-  ui.impMsg='';
-  try{const rows=await readFileRows(f);const m=mapBOQ(rows);
+  ui.impMsg='';ui.impBusy='Reading '+f.name+'…';ui.imp=null;render();
+  try{const m=await extractItems(f);
     if(!m.items.length){ui.impMsg='No lines with a description and a quantity were found. Check that the file has columns for description, quantity and rate.';ui.imp=null}
     else ui.imp={name:f.name,items:m.items,note:m.note,mode:cur().items.length?'append':'replace'};
-  }catch(err){ui.impMsg=err.message;ui.imp=null}
-  render();
+  }catch(err){ui.impMsg=err.message||'That file could not be read.';ui.imp=null}
+  ui.impBusy='';render();
 }
 function tokens(s){const stop=new Set(['and','the','for','with','supply','supplied','fix','fixed','incl','including','per','each','all','from']);return new Set(String(s).toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>2&&!stop.has(w)).map(w=>w.length>4?w.slice(0,4):w.replace(/s$/,'')))}
 function buildPriceImport(name,rows){
@@ -811,6 +936,18 @@ document.addEventListener('click',e=>{
      saveText((P.name||'boq')+' BOQ.csv',toCSV([['Ref','Description','Unit','Qty','Rate','Amount','Work section','Category'],...P.items.map((i,n)=>[n+1,i.desc,i.unit,i.qty,i.rate,tot(i),PHASES.find(p=>p.id===i.ph).name,CATS[i.cat]])]),'text/csv');break}
    case 'exportCmp':{if(!pro())return lockIt('CSV export is part of Pro.');const c=calc(P);
      saveText((P.name||'project')+' comparison.csv',toCSV([['Item','Qty','Unit','Budget rate','Best supplier','Best rate','Saving'],...P.items.map(i=>{const w=c.q[i.id][0];return [i.desc,i.qty,i.unit,i.rate,w?w.s.name:'',w?w.rate:'',w?tot(i)-w.total:'']})]),'text/csv');break}
+   case 'signIn':case 'signUp':{const em=($('#acc_email').value||'').trim(),pw=$('#acc_pw').value||'';if(!em||pw.length<6){ui.accMsg='Enter your email and a password of at least 6 characters.';ui.accErr=true;render();break}
+     ui.accMsg='Working…';ui.accErr=false;render();
+     authCall(act==='signUp'?'up':'in',em,pw).then(r=>{ui.accMsg=r==='confirm'?'Check your email to confirm the account, then sign in.':'Signed in.';ui.accErr=false;render()}).catch(err=>{ui.accMsg=err.message;ui.accErr=true;render()});break}
+   case 'signOut':setSess(null);store.plan='free';saveStore();ui.accMsg='';render();break;
+   case 'syncNow':ui.accMsg='Syncing…';ui.accErr=false;render();pullWorkspace().then(()=>{ui.accMsg='Synced.';render()}).catch(err=>{ui.accMsg=err.message;ui.accErr=true;render()});break;
+   case 'refreshPlan':afterLogin().then(()=>{ui.accMsg='Plan: '+store.plan;ui.accErr=false;render()}).catch(err=>{ui.accMsg=err.message;ui.accErr=true;render()});break;
+   case 'subscribe':{ui.accMsg='Opening checkout…';ui.accErr=false;render();
+     sbFetch('/functions/v1/payfast-checkout',{method:'POST',body:JSON.stringify({plan:arg})}).then(j=>{
+       const f=document.createElement('form');f.method='POST';f.action=j.action;
+       j.order.forEach(k=>{const i=document.createElement('input');i.type='hidden';i.name=k;i.value=j.fields[k];f.appendChild(i)});
+       const sg=document.createElement('input');sg.type='hidden';sg.name='signature';sg.value=j.signature;f.appendChild(sg);
+       document.body.appendChild(f);f.submit()}).catch(err=>{ui.accMsg=err.message;ui.accErr=true;render()});break}
    case 'backupCopy':copyText(JSON.stringify(store),'Backup copied');break;
    case 'backupSave':saveText('boq-planner-backup.json',JSON.stringify(store,null,1),'application/json');break;
    case 'restore':{try{const s=JSON.parse($('#restorebox').value);if(!s.projects||!s.projects.length)throw 0;store=s;saveStore();ui.view='app';toast('Backup restored');render()}catch(err){toast('That is not a valid backup')}break}
@@ -819,6 +956,7 @@ document.addEventListener('click',e=>{
 
 initStore();
 render();
+if(cloudOn()&&sess){afterLogin().then(()=>{if(/[?&]paid=1/.test(location.search)){ui.view='plans';ui.accMsg='Thanks. Your plan updates as soon as PayFast confirms the payment. Press Refresh my plan if it still shows Free.'}render()}).catch(()=>{})}
 </script>
 
 </body>

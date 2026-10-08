@@ -6,7 +6,7 @@ Open `index.html` in a browser. There is nothing to install and no server. Data 
 
 ## What works now
 
-- **BOQ import** from Excel (.xlsx/.xls), CSV, or pasted text. Lines are sorted into work sections and supplier categories automatically, and can be edited.
+- **BOQ import** from Excel, CSV, Word tables, text PDFs, scanned PDFs, photos, or pasted text. Scans and photos use free in-browser text recognition (Tesseract), so the preview must be checked before importing. Readers load from a CDN on first use, so the first scan needs internet. Lines are sorted into work sections and supplier categories automatically, and can be edited.
 - **Programme** with critical path, start date, crew pace, rain allowance, the December builders' break, and per-phase duration overrides.
 - **Suppliers**: your own supplier book, a price table, ranking by saving against BOQ rates, quote-request emails with email and WhatsApp links, map search links for more suppliers near the site, "use my location".
 - **Price-list import** (Pro): upload or paste a supplier price list and match it to BOQ lines.
@@ -16,9 +16,7 @@ Open `index.html` in a browser. There is nothing to install and no server. Data 
 
 ## Not built yet
 
-- Accounts, sign-in and cloud sync (everything is on one device).
-- Taking payment. The plans screen is a mock. Prices (R249 and R599 a month) are placeholders.
-- Reading PDF, Word and photo BOQs (needs OCR).
+- Live accounts and payments. The code for sign-in, cloud sync and PayFast monthly billing is written (`supabase/`, `config.js`) but needs your own Supabase and PayFast accounts. See `SETUP.md`. The billing code has not been tested against live PayFast.
 - Automatic live prices. Merchants rarely publish machine-readable prices, so prices come from price lists and quotes you enter.
 - Supplier distances from coordinates. Distance is typed in per supplier; location only centres map searches.
 

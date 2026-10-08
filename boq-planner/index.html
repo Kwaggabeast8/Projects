@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>BOQ Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: header, sticky numbers strip, six workflow tabs; one full-width panel at a time. Plans and Projects replace the panel. */
+:root{
+  --bg:#eef1f4; --surface:#ffffff; --ink:#15212c; --muted:#5a6a79; --line:#d6dde4; --soft:#f4f7f9;
+  --accent:#0a6c70; --accent-ink:#ffffff; --accent-soft:#d6eeee;
+  --good:#1b7a47; --good-soft:#dcf1e5; --warn:#a85d00; --warn-soft:#fbead0; --bad:#b3261e; --bad-soft:#f9dedb;
+  --bar:#9fb0bf; --grid:#e3e8ed;
+  --f-display:'Barlow Condensed','Arial Narrow',sans-serif; --f-body:'Barlow',system-ui,sans-serif; --f-mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f161d; --surface:#17212b; --ink:#e7edf2; --muted:#93a4b3; --line:#2a3946; --soft:#1c2833;
+  --accent:#3cc1c4; --accent-ink:#06282a; --accent-soft:#12383b;
+  --good:#5fd08d; --good-soft:#143a26; --warn:#f0a94a; --warn-soft:#41300f; --bad:#ff8a80; --bad-soft:#47201d;
+  --bar:#4a5d6e; --grid:#243340; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f161d; --surface:#17212b; --ink:#e7edf2; --muted:#93a4b3; --line:#2a3946; --soft:#1c2833;
+  --accent:#3cc1c4; --accent-ink:#06282a; --accent-soft:#12383b;
+  --good:#5fd08d; --good-soft:#143a26; --warn:#f0a94a; --warn-soft:#41300f; --bad:#ff8a80; --bad-soft:#47201d;
+  --bar:#4a5d6e; --grid:#243340; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;padding-inline:16px;padding-block:0 56px}
+.wrap{max-width:1160px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:30px;line-height:1.1} h2{font-size:24px} h3{font-size:18px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.muted{color:var(--muted)} .small{font-size:12.5px}
+.pos{color:var(--good)} .neg{color:var(--bad)}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+button,select,input,textarea{font:inherit;color:inherit}
+button,label.btn{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header.top{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;padding-block:16px 12px}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand h1{font-size:28px}
+.hdr-r{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{display:inline-block;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 12px;font-size:13px;font-weight:500;text-decoration:none;color:var(--ink);line-height:1.3}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.sm{padding:4px 9px;font-size:12px}
+.btn.danger{color:var(--bad)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.sel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:14px;max-width:240px}
+.banner{background:var(--warn-soft);color:var(--warn);font-size:13px;padding:8px 12px;border-radius:6px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.strip{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.strip>div{background:var(--surface);padding:10px 14px;min-width:0}
+.strip .k{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.strip .v{font-family:var(--f-display);font-size:26px;font-weight:600;line-height:1.15;white-space:nowrap}
+.strip .s{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:700px){.brand .eyebrow{display:none}.strip{grid-template-columns:repeat(2,1fr)}.strip .v{font-size:22px}}
+nav.steps{display:flex;gap:2px;margin-top:16px;overflow-x:auto;border-bottom:1px solid var(--line)}
+nav.steps button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 12px;font-family:var(--f-display);font-size:18px;font-weight:600;color:var(--muted);white-space:nowrap}
+nav.steps button .n{font-family:var(--f-mono);font-size:11px;margin-right:5px}
+nav.steps button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.panel{background:var(--surface);border:1px solid var(--line);border-top:0;border-radius:0 0 8px 8px;padding:20px}
+.panel.solo{border-top:1px solid var(--line);border-radius:8px;margin-top:16px}
+.row{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-end}
+.row>*{min-width:0}
+.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.field input[type=text],.field input[type=date],.field select,.field textarea{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:7px 9px;color:var(--ink);font-size:14px;width:100%}
+.field input[type=range]{accent-color:var(--accent)}
+.check{display:flex;gap:8px;align-items:center;font-size:14px}
+.card{border:1px solid var(--line);border-radius:8px;padding:14px;margin-block:14px;background:var(--surface)}
+.hint{font-size:13px;color:var(--muted);margin:6px 0 14px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;font-weight:500;padding:9px 8px;background:var(--soft);border-bottom:1px solid var(--line);white-space:nowrap}
+th.r{text-align:right}
+td{padding:6px 8px;border-bottom:1px solid var(--grid);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tfoot td{font-weight:600;background:var(--soft)}
+td input[type=text],td select{width:100%;background:var(--soft);border:1px solid transparent;border-radius:5px;padding:5px 6px;font-size:13px}
+td input[type=text]:hover,td select:hover{border-color:var(--line)}
+td input.r{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.chip{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.chip.good{background:var(--good-soft);color:var(--good)} .chip.bad{background:var(--bad-soft);color:var(--bad)} .chip.warn{background:var(--warn-soft);color:var(--warn)} .chip.acc{background:var(--accent-soft);color:var(--accent)} .chip.mute{background:var(--soft);color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-block:14px}
+.stat{border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.stat .v{font-family:var(--f-display);font-size:24px;font-weight:600}
+.drop{border:1.5px dashed var(--line);border-radius:8px;padding:14px 16px;background:var(--soft)}
+.gantt{min-width:760px}
+.g-head,.g-row{display:grid;grid-template-columns:210px 1fr;align-items:center}
+.g-head{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);padding-bottom:6px;border-bottom:1px solid var(--line)}
+.g-axis{position:relative;height:16px}
+.g-axis span{position:absolute;transform:translateX(-50%)}
+.g-row{height:36px;border-bottom:1px solid var(--grid)}
+.g-name{font-size:13px;padding-right:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-track{position:relative;height:100%;background-image:linear-gradient(to right,var(--grid) 1px,transparent 1px);background-size:var(--wk) 100%}
+.g-bar{position:absolute;top:8px;height:20px;border-radius:4px;background:var(--bar);color:#fff;font-family:var(--f-mono);font-size:10.5px;display:flex;align-items:center;padding-inline:6px;white-space:nowrap;overflow:hidden}
+.g-bar.crit{background:var(--accent);color:var(--accent-ink)}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:10px;flex-wrap:wrap}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.picks{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;margin-block:12px 22px}
+.pick{border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.pick.first{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.pick .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.pick .rank{font-family:var(--f-display);font-size:34px;line-height:1;color:var(--accent)}
+.contact{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;font-size:13px}
+.contact .mono{font-size:12.5px;overflow-wrap:anywhere}
+.best{background:var(--good-soft);color:var(--good);font-weight:600}
+.rfq textarea{width:100%;min-height:230px;font-family:var(--f-mono);font-size:12.5px;background:var(--soft);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:10px;resize:vertical}
+.pl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:20px;align-items:start}
+@media(max-width:860px){.pl{grid-template-columns:1fr}}
+.verdict{border-radius:8px;padding:16px}
+.verdict.good{background:var(--good-soft)} .verdict.bad{background:var(--bad-soft)}
+.verdict .big{font-family:var(--f-display);font-size:44px;font-weight:700;line-height:1.05}
+.verdict.good .big{color:var(--good)} .verdict.bad .big{color:var(--bad)}
+.ledger{width:100%;margin-top:10px}
+.ledger td{padding:5px 0;border:0;font-size:14px} .ledger tr.t td{border-top:1px solid var(--line);font-weight:600;padding-top:8px}
+.chart{width:100%;height:auto;display:block}
+.chart text{font-family:var(--f-mono);font-size:10px;fill:var(--muted)}
+.chart .ax{stroke:var(--line);stroke-width:1} .chart .gl{stroke:var(--grid);stroke-width:1}
+details summary{cursor:pointer;font-family:var(--f-display);font-size:18px;font-weight:600;margin-block:18px 10px}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-block:16px}
+.plan{border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:10px;background:var(--surface)}
+.plan.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.plan .price{font-family:var(--f-display);font-size:38px;font-weight:700;line-height:1}
+.plan ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px;font-size:14px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:13px;z-index:20;max-width:90vw}
+.toast[hidden]{display:none}
+.lock{opacity:.85}
+@media print{header.top,.strip,nav.steps,.banner,.noprint,.toast{display:none!important}.panel{border:0;padding:0}body{background:#fff}}
+@media (prefers-reduced-motion:no-preference){.g-bar{transition:left .25s,width .25s}}
+</style>
+
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast" hidden></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+/* ================= constants ================= */
+const PHASES=[
+ {id:1,name:'Site establishment',days:5,pred:[]},
+ {id:2,name:'Excavation and footings',days:12,pred:[1]},
+ {id:3,name:'Slab and damp-proofing',days:10,pred:[2]},
+ {id:4,name:'Brickwork to wallplate',days:25,pred:[3]},
+ {id:5,name:'Roof trusses and tiles',days:12,pred:[4]},
+ {id:6,name:'Electrical and plumbing first fix',days:10,pred:[5]},
+ {id:7,name:'Windows and doors',days:6,pred:[5]},
+ {id:8,name:'Plaster and screed',days:14,pred:[6,7]},
+ {id:9,name:'Ceilings and tiling',days:12,pred:[8]},
+ {id:10,name:'Second fix and fittings',days:8,pred:[9]},
+ {id:11,name:'Painting',days:10,pred:[10]},
+ {id:12,name:'Snagging and handover',days:4,pred:[11]}
+];
+const CATS={general:'General and labour',concrete:'Concrete and cement',bricks:'Bricks and sand',timber:'Timber and doors',roofing:'Roofing',electrical:'Electrical',plumbing:'Plumbing and sanitary',glazing:'Windows and glass',finishes:'Plaster, ceilings, paint',tiles:'Tiles'};
+const RULES=[
+ [/truss|rafter|purlin/i,5,'timber'],
+ [/roof|gutter|fascia|ridge|sheeting/i,5,'roofing'],
+ [/floor tile|wall tile|tiling|\btiles?\b/i,9,'tiles'],
+ [/ceiling|cornice|bulkhead/i,9,'finishes'],
+ [/plaster|screed|render/i,8,'finishes'],
+ [/paint|primer|varnish|enamel/i,11,'finishes'],
+ [/hoarding|temporary|site office|setting out|establish|preliminar/i,1,'general'],
+ [/snag|handover|final clean/i,12,'general'],
+ [/sanitary|toilet|basin|bath|shower|\btap|geyser|kitchen|cupboard|vanity|fittings?/i,10,'plumbing'],
+ [/plumb|pipe|waste|drain/i,6,'plumbing'],
+ [/electric|wiring|cable|db board|conduit|socket|switch|light|distribution/i,6,'electrical'],
+ [/window|glass|glaz|aluminium|burglar/i,7,'glazing'],
+ [/door|frame|architrave/i,7,'timber'],
+ [/excavat|trench|earthwork|backfill/i,2,'general'],
+ [/hardcore|surface bed|slab|dpc|dpm|damp/i,3,'concrete'],
+ [/footing|foundation|rebar|reinforc|concrete|readymix/i,2,'concrete'],
+ [/cement/i,4,'concrete'],
+ [/brick|block|mortar|sand|stone|lintel|wall/i,4,'bricks']
+];
+function guess(desc){for(const r of RULES)if(r[0].test(desc))return {ph:r[1],cat:r[2]};return {ph:4,cat:'general'}}
+const SAMPLE_ITEMS=[
+ ['Site hoarding, toilet, temporary water and power','sum',1,18500],['Setting out by surveyor','sum',1,6500],
+ ['Excavate trenches','m³',42,185],['Strip footings, 25 MPa concrete','m³',18,2350],
+ ['Hardcore, compacted','m³',30,420],['Surface bed 100 mm with mesh','m²',180,365],['DPC and DPM','m²',180,48],
+ ['Clay stock bricks','no.',14500,3.85],['Cement, 50 kg bags','bag',160,118],['Building sand','m³',22,520],['Brickforce, 75 mm','roll',40,62],
+ ['Timber roof trusses, erected','m²',200,540],['Concrete roof tiles','m²',200,260],
+ ['Electrical first fix and DB board','sum',1,38000],['Plumbing first fix','sum',1,32000],
+ ['Aluminium windows','no.',12,3400],['Internal and external doors','no.',9,2800],
+ ['Plaster to walls','m²',520,95],['Ceiling boards and cornice','m²',170,135],['Floor tiles, supply and lay','m²',150,310],
+ ['Sanitaryware and kitchen fittings','sum',1,28000],['Paint, 2 coats','m²',780,48],['Snagging crew','sum',1,7500]];
+const SAMPLE_SUPS=[
+ ['Ridgeway Builders Merchant','Halfway House',4.2,'011 555 0142','orders@ridgeway-merchant.example',1,['concrete','bricks','general','finishes','electrical']],
+ ['Kopje Cement and Aggregates','Kyalami',9.8,'011 555 0177','sales@kopje-cement.example',1,['concrete','bricks']],
+ ['Northgate Brick and Block','Olifantsfontein',12.5,'011 555 0121','quotes@northgate-brick.example',2,['bricks','concrete','roofing']],
+ ['Metro Timber and Roofing','Midrand',7.1,'011 555 0190','trade@metro-timber.example',3,['timber','roofing','glazing']],
+ ['Allied Trade Depot','Randjespark',15.3,'011 555 0108','accounts@allied-depot.example',2,['general','timber','finishes','plumbing','electrical','tiles','glazing','roofing']],
+ ['Karoo Tiles and Sanitary','Waterfall',6.4,'011 555 0163','info@karoo-tiles.example',4,['tiles','plumbing','finishes']],
+ ['Sparkline Electrical Wholesale','Midrand',5.0,'011 555 0135','sales@sparkline-elec.example',1,['electrical','general']],
+ ['Aquaflow Plumbing Supplies','Halfway House',8.8,'011 555 0154','orders@aquaflow.example',2,['plumbing','general']],
+ ['Frameline Aluminium and Doors','Kyalami',11.0,'011 555 0116','quotes@frameline.example',10,['glazing','timber']],
+ ['ColourCoat Paints and Plaster','Midrand',3.6,'011 555 0129','trade@colourcoat.example',1,['finishes','tiles']]];
+const REF_BUDGET=SAMPLE_ITEMS.reduce((a,i)=>a+i[2]*i[3],0);
+
+/* ================= helpers ================= */
+const $=s=>document.querySelector(s);
+const uid=()=>Math.random().toString(36).slice(2,9);
+const R=n=>(n<0?'-':'')+'R '+Math.round(Math.abs(n)).toLocaleString('en-ZA').replace(/\s/g,' ');
+const R2=n=>'R '+Number(n).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2}).replace(/\s/g,' ');
+const pct=n=>(n>=0?'+':'')+n.toFixed(1)+'%';
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hsh=s=>{let x=7;for(const c of s)x=(x*31+c.charCodeAt(0))>>>0;return x};
+const fmtD=d=>d.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
+const fmtDs=d=>d.toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
+function num(v){if(v==null)return null;let s=String(v).replace(/[R\s ]/gi,'');if(s==='')return null;
+  if(/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(s))s=s.replace(/,/g,'');else s=s.replace(',','.');
+  const n=parseFloat(s);return isNaN(n)?null:n}
+const tot=i=>(Number(i.qty)||0)*(Number(i.rate)||0);
+function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3600)}
+function copyText(txt,msg){
+  const fb=()=>{const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();try{document.execCommand('copy');toast(msg||'Copied')}catch(e){toast('Select the text and copy it by hand')}t.remove()};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>toast(msg||'Copied'),fb);else fb();
+}
+function saveText(name,text,mime){
+  try{const b=new Blob([text],{type:mime||'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();toast('Saving '+name+'. If nothing downloads, use Copy.')}catch(e){toast('Could not save. Use Copy instead.')}
+}
+const csvCell=v=>{const s=String(v==null?'':v);return /[",\n;]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+const toCSV=rows=>rows.map(r=>r.map(csvCell).join(',')).join('\n');
+function waNumber(p){let d=String(p).replace(/\D/g,'');if(d.startsWith('0'))d='27'+d.slice(1);return d}
+
+/* ================= storage ================= */
+const LS='boqplanner.v1';
+let store=null,mem=null;
+function loadStore(){try{const t=localStorage.getItem(LS);if(t)return JSON.parse(t)}catch(e){}return null}
+function saveStore(){mem=store;try{localStorage.setItem(LS,JSON.stringify(store))}catch(e){}}
+function blankProject(name){return {id:uid(),name:name||'New project',client:'',site:'',lat:null,lon:null,start:nextMonday(),pace:1,weather:true,xmas:true,radius:25,markup:15,overhead:14500,delay:0,vat:true,status:8,sample:false,items:[],quotes:{},actual:{},variations:[],phaseDays:{},rfq:{}}}
+function nextMonday(){const d=new Date();d.setDate(d.getDate()+((8-d.getDay())%7||7));return d.toISOString().slice(0,10)}
+function sampleSuppliers(){return SAMPLE_SUPS.map((s,i)=>({id:'sam'+i,name:s[0],area:s[1],km:s[2],phone:s[3],email:s[4],lead:s[5],cats:s[6],sample:true}))}
+function sampleProject(sups){
+  const P=blankProject('Smith residence');
+  Object.assign(P,{client:'J. Smith',site:'Midrand, Gauteng',sample:true,delay:10,status:20});
+  P.items=SAMPLE_ITEMS.map((a,n)=>({id:'i'+n,desc:a[0],unit:a[1],qty:a[2],rate:a[3],...guess(a[0])}));
+  P.items.forEach(it=>{P.quotes[it.id]={};sups.forEach(s=>{if(s.cats.includes(it.cat))P.quotes[it.id][s.id]=Math.round(it.rate*(0.86+(hsh(s.id+it.id)%2200)/10000)*100)/100})});
+  return P;
+}
+function initStore(){
+  const s=loadStore();
+  if(s&&s.projects&&s.projects.length){store=s;return}
+  const sups=sampleSuppliers();const P=sampleProject(sups);
+  store={v:1,plan:'free',cur:P.id,projects:[P],suppliers:sups};
+}
+const cur=()=>store.projects.find(p=>p.id===store.cur)||store.projects[0];
+const pro=()=>store.plan!=='free';
+
+/* ================= import parsing ================= */
+function parseCSV(text){
+  const first=text.split(/\r?\n/).find(l=>l.trim())||'';
+  const d=first.includes('\t')?'\t':((first.match(/;/g)||[]).length>(first.match(/,/g)||[]).length?';':',');
+  const rows=[];let row=[],f='',q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true;
+    else if(c===d){row.push(f);f=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(f);rows.push(row);row=[];f=''}
+    else f+=c}
+  row.push(f);rows.push(row);
+  return rows.filter(r=>r.some(c=>String(c).trim()!==''));
+}
+function mapBOQ(rows){
+  const low=r=>r.map(c=>String(c==null?'':c).toLowerCase());
+  let hi=-1,cols={};
+  for(let i=0;i<Math.min(rows.length,30);i++){
+    const r=low(rows[i]);
+    let d=r.findIndex(c=>/desc|particular|detail/.test(c));if(d<0)d=r.findIndex(c=>/item|work/.test(c));
+    const q=r.findIndex(c=>/qty|quant/.test(c));
+    if(d>=0&&q>=0){hi=i;cols={d,q,u:r.findIndex(c=>/^units?$|^uom$|^u\/m$/.test(c)),r:r.findIndex(c=>/rate|price/.test(c)),a:r.findIndex(c=>/amount|total|value/.test(c))};break}
+  }
+  let note='';
+  if(hi<0){hi=0;cols={d:0,u:1,q:2,r:3,a:4};note='No header row found, so columns were read as Description, Unit, Quantity, Rate, Amount.';
+    const f=rows[0]||[];if(f.length&&num(f[2])===null&&num(f[0])!==null){cols={d:1,u:2,q:3,r:4,a:5}}
+    hi=-1}
+  const out=[];
+  rows.slice(hi+1).forEach(r=>{
+    const desc=String(r[cols.d]==null?'':r[cols.d]).trim();const qty=num(r[cols.q]);
+    if(!desc||qty===null||qty<=0)return;
+    let rate=cols.r>=0?num(r[cols.r]):null;
+    const amt=cols.a>=0?num(r[cols.a]):null;
+    if((rate===null||rate===0)&&amt&&qty)rate=amt/qty;
+    out.push({id:'i'+uid(),desc,unit:cols.u>=0?String(r[cols.u]||'').trim()||'no.':'no.',qty,rate:rate||0,...guess(desc)});
+  });
+  return {items:out,note};
+}
+async function readFileRows(file){
+  const ext=(file.name.split('.').pop()||'').toLowerCase();
+  if(['csv','tsv','txt'].includes(ext))return parseCSV(await file.text());
+  if(['xlsx','xls','xlsm'].includes(ext)){
+    if(!window.XLSX)throw new Error('The Excel reader did not load. Check your internet connection once, or save the sheet as CSV.');
+    const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
+    let best=[];wb.SheetNames.forEach(n=>{const r=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''});if(r.length>best.length)best=r});
+    return best.filter(r=>r.some(c=>String(c).trim()!==''));
+  }
+  throw new Error('PDF, Word and photo files cannot be read yet. Open the file, copy the table, and paste it below, or save it as Excel or CSV.');
+}
+
+/* ================= calculations ================= */
+function workdays(P){
+  const out=[];let d=new Date(P.start+'T00:00:00');if(isNaN(d))d=new Date();
+  while(out.length<700){
+    const dow=d.getDay(),m=d.getMonth()+1,day=d.getDate();
+    const brk=P.xmas&&((m===12&&day>=15)||(m===1&&day<=12));
+    if(dow!==0&&dow!==6&&!brk)out.push(new Date(d));
+    d=new Date(d.getTime()+86400000);
+  }
+  return out;
+}
+function schedule(P){
+  const budget=P.items.reduce((a,i)=>a+tot(i),0);
+  const scale=Math.min(3,Math.max(.5,Math.sqrt((budget||REF_BUDGET)/REF_BUDGET)));
+  const f=P.pace*(P.weather?1.1:1)*scale;
+  const active=id=>P.items.some(i=>i.ph===id);
+  const t={};PHASES.forEach(p=>{const ov=P.phaseDays[p.id];t[p.id]={...p,on:active(p.id),d:active(p.id)?(ov>0?ov:Math.max(1,Math.ceil(p.days*f))):0,ov:ov>0,es:0,ef:0}});
+  PHASES.forEach(p=>{const x=t[p.id];x.es=Math.max(0,...p.pred.map(q=>t[q].ef));x.ef=x.es+x.d});
+  const end=Math.max(0,...PHASES.map(p=>t[p.id].ef));
+  [...PHASES].reverse().forEach(p=>{const x=t[p.id];const succ=PHASES.filter(q=>q.pred.includes(p.id));x.lf=succ.length?Math.min(...succ.map(q=>t[q.id].ls)):end;x.ls=x.lf-x.d;x.slack=x.ls-x.es;x.crit=x.on&&x.slack===0});
+  return {t,end,days:workdays(P),scale};
+}
+function quotesFor(P,it){
+  const q=P.quotes[it.id]||{};
+  return store.suppliers.filter(s=>q[s.id]>0&&(s.km==null||s.km<=P.radius)).map(s=>({s,rate:q[s.id],total:q[s.id]*it.qty})).sort((a,b)=>a.rate-b.rate);
+}
+function calc(P){
+  const sch=schedule(P);const q={};P.items.forEach(i=>q[i.id]=quotesFor(P,i));
+  const line=i=>{const paid=P.actual[i.id];const best=q[i.id][0]?q[i.id][0].total:null;
+    return paid!==undefined&&paid!==''?{paid:+paid,fc:+paid,state:'paid'}:best!==null?{paid:null,fc:best,state:'quoted'}:{paid:null,fc:tot(i),state:'budget'}};
+  const L={};P.items.forEach(i=>L[i.id]=line(i));
+  const budget=P.items.reduce((a,i)=>a+tot(i),0);
+  const bestCost=P.items.reduce((a,i)=>a+(q[i.id][0]?q[i.id][0].total:tot(i)),0);
+  const forecast=P.items.reduce((a,i)=>a+L[i.id].fc,0);
+  const paid=P.items.reduce((a,i)=>a+(L[i.id].paid||0),0);
+  const needQuote=P.items.filter(i=>!q[i.id].length).length;
+  const planWeeks=sch.end/5,actWeeks=(sch.end+(P.delay||0))/5;
+  const planOH=planWeeks*P.overhead,actOH=actWeeks*P.overhead;
+  const varIncome=P.variations.reduce((a,v)=>a+(+v.income||0),0),varCost=P.variations.reduce((a,v)=>a+(+v.cost||0),0);
+  const totalBudget=budget+planOH;
+  const contract=totalBudget*(1+P.markup/100);
+  const totalCost=forecast+actOH;
+  const profit=contract+varIncome-totalCost-varCost;
+  return {sch,q,L,budget,bestCost,forecast,paid,needQuote,planWeeks,actWeeks,planOH,actOH,varIncome,varCost,totalBudget,contract,totalCost,profit,plannedProfit:contract-totalBudget,saving:budget-bestCost};
+}
+function rankSuppliers(P,c){
+  const m={};
+  P.items.forEach(i=>{const w=c.q[i.id][0];if(w){const x=m[w.s.id]||(m[w.s.id]={s:w.s,n:0,save:0});x.n++;x.save+=tot(i)-w.total}});
+  return Object.values(m).sort((a,b)=>b.save-a.save);
+}
+function curve(P,c){
+  const W=Math.max(1,Math.ceil(c.sch.end/5));const pl=Array(W+1).fill(0),ac=Array(W+1).fill(0);
+  PHASES.forEach(p=>{const x=c.sch.t[p.id];if(!x.on||!x.d)return;
+    const its=P.items.filter(i=>i.ph===p.id);const b=its.reduce((a,i)=>a+tot(i),0),a=its.reduce((s,i)=>s+c.L[i.id].fc,0);
+    for(let d=x.es;d<x.ef;d++){const w=Math.floor(d/5);pl[w]+=b/x.d;ac[w]+=a/x.d}});
+  for(let w=0;w<W;w++){pl[w]+=P.overhead;ac[w]+=P.overhead}
+  const cum=a=>{let s=0;return [0,...a.slice(0,W).map(v=>s+=v)]};
+  return {W,plan:cum(pl),act:cum(ac)};
+}
+function chartSVG(P,c){
+  const {W,plan,act}=curve(P,c);
+  const f=Math.max(1,c.actWeeks/Math.max(c.planWeeks,.01));const WA=Math.max(W,Math.ceil(W*f));
+  const at=w=>{const t=w/f;if(t>=W)return act[W];const i=Math.floor(t),fr=t-i;return act[i]+(act[i+1]-act[i])*fr};
+  const st=Math.min(P.status,WA);const actPts=[];for(let w=0;w<=st;w++)actPts.push([w,at(w)]);
+  const ymax=Math.max(c.contract,c.totalCost,plan[W],1)*1.06,xmax=WA;
+  const L=56,T=12,Wd=640,H=270,Rr=14,B=30,pw=Wd-L-Rr,ph=H-T-B;
+  const X=w=>L+w/xmax*pw,Y=v=>T+ph-v/ymax*ph;
+  const path=pts=>pts.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');
+  let grid='';const step=ymax>6e6?2e6:ymax>2.5e6?1e6:5e5;
+  for(let v=0;v<=ymax;v+=step)grid+=`<line class="gl" x1="${L}" x2="${Wd-Rr}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L-6}" y="${Y(v)+3}" text-anchor="end">R${(v/1e6).toFixed(1)}m</text>`;
+  for(let w=0;w<=xmax;w+=4)grid+=`<text x="${X(w)}" y="${H-12}" text-anchor="middle">wk ${w}</text>`;
+  const last=actPts[actPts.length-1],flip=last[0]>xmax*0.75;
+  return `<svg class="chart" viewBox="0 0 ${Wd} ${H}" role="img" aria-label="Cumulative cost by week: planned, forecast and contract price">
+   ${grid}<line class="ax" x1="${L}" x2="${Wd-Rr}" y1="${Y(0)}" y2="${Y(0)}"/>
+   <line x1="${L}" x2="${Wd-Rr}" y1="${Y(c.contract)}" y2="${Y(c.contract)}" stroke="var(--good)" stroke-width="1.5" stroke-dasharray="5 4"/>
+   <text x="${Wd-Rr}" y="${Y(c.contract)-5}" text-anchor="end" style="fill:var(--good)">Contract price ${R(c.contract)}</text>
+   <path d="${path(plan.map((v,i)=>[i,v]))}" fill="none" stroke="var(--bar)" stroke-width="2.5"/>
+   <path d="${path(actPts)}" fill="none" stroke="var(--accent)" stroke-width="3"/>
+   <circle cx="${X(last[0])}" cy="${Y(last[1])}" r="4.5" fill="var(--accent)"/>
+   <text x="${X(last[0])+(flip?-8:8)}" y="${Y(last[1])+(flip?16:-8)}" text-anchor="${flip?'end':'start'}" style="fill:var(--ink)">${R(last[1])} by wk ${last[0]}</text></svg>`;
+}
+
+/* ================= ui state ================= */
+let ui={tab:'boq',view:'app',confirm:'',imp:null,impMsg:'',pimp:null,pimpMsg:'',pimpSup:'',rfq:null,geoMsg:''};
+const TABS=[['boq','Read the BOQ'],['prog','Programme'],['sup','Best suppliers'],['pri','Prices'],['pl','Profit and loss'],['rep','Report']];
+
+/* ================= views ================= */
+function inp(attrs,val,cls){return `<input type="text" ${attrs} value="${esc(val)}"${cls?` class="${cls}"`:''} autocomplete="off">`}
+function sel(attrs,opts,val){return `<select ${attrs}>${opts.map(([v,l])=>`<option value="${esc(v)}"${String(v)===String(val)?' selected':''}>${esc(l)}</option>`).join('')}</select>`}
+const phaseOpts=PHASES.map(p=>[p.id,p.id+'. '+p.name]),catOpts=Object.entries(CATS);
+
+function renderHeader(P){
+  return `<header class="top"><div class="brand"><h1>BOQ Planner</h1><span class="eyebrow">Build smarter, price better</span></div>
+  <div class="hdr-r noprint">
+   <select class="sel" id="projsel" data-act="openSel" aria-label="Project">${store.projects.map(p=>`<option value="${p.id}"${p.id===P.id?' selected':''}>${esc(p.name)}</option>`).join('')}</select>
+   <button class="btn" data-act="view" data-arg="projects" type="button">Projects</button>
+   <button class="btn ${pro()?'':'primary'}" data-act="view" data-arg="plans" type="button">${pro()?(store.plan==='business'?'Business':'Pro'):'Free plan · Upgrade'}</button>
+   <button class="btn" data-act="theme" type="button">Light / dark</button>
+  </div></header>`;
+}
+function renderStrip(P,c){
+  const end=c.sch.days[Math.max(0,c.sch.end-1)];const pos=c.profit>=0;
+  const diff=c.totalBudget-c.totalCost;
+  return `<section class="strip" aria-label="Project summary">
+  <div><div class="k">BOQ budget</div><div class="v">${R(c.budget)}</div><div class="s">${P.items.length} lines</div></div>
+  <div><div class="k">Forecast cost</div><div class="v">${R(c.totalCost)}</div><div class="s ${diff>=0?'pos':'neg'}">${R(Math.abs(diff))} ${diff>=0?'under':'over'} budget</div></div>
+  <div><div class="k">Build time</div><div class="v">${c.planWeeks.toFixed(1)} weeks</div><div class="s">${c.sch.end?'Handover '+fmtDs(end)+' '+end.getFullYear():'Add BOQ lines'}</div></div>
+  <div><div class="k">Projected profit</div><div class="v ${pos?'pos':'neg'}">${R(c.profit)}</div><div class="s">${P.items.length?(pos?'Making money':'Losing money')+' · '+(c.contract?(c.profit/(c.contract+c.varIncome)*100).toFixed(1):'0.0')+'% margin':'No data yet'}</div></div></section>`;
+}
+
+/* ---- tab 1 BOQ ---- */
+function tabBOQ(P,c){
+  const imp=ui.imp;
+  let impHtml='';
+  if(imp){
+    const sample=imp.items.slice(0,8).map(i=>`<tr><td>${esc(i.desc)}</td><td>${esc(i.unit)}</td><td class="num">${i.qty}</td><td class="num">${R2(i.rate)}</td><td>${PHASES.find(p=>p.id===i.ph).name}</td><td>${CATS[i.cat]}</td></tr>`).join('');
+    impHtml=`<div class="card"><h3>Found ${imp.items.length} lines in ${esc(imp.name)}</h3>
+     ${imp.note?`<p class="hint">${esc(imp.note)}</p>`:''}
+     <div class="tablewrap" style="margin-block:10px"><table><thead><tr><th>Description</th><th>Unit</th><th class="r">Qty</th><th class="r">Rate</th><th>Work section</th><th>Category</th></tr></thead><tbody>${sample}</tbody></table></div>
+     ${imp.items.length>8?`<p class="hint">Showing the first 8. You can change any line after importing.</p>`:''}
+     <div class="row"><label class="field">Add to project${sel('data-ui="impMode"',[['replace','Replace the current lines'],['append','Add to the current lines']],imp.mode)}</label>
+     <button class="btn primary" data-act="impApply" type="button">Import ${imp.items.length} lines</button><button class="btn" data-act="impCancel" type="button">Cancel</button></div></div>`;
+  }
+  const rows=P.items.map((i,n)=>`<tr>
+    <td class="muted mono">${n+1}</td>
+    <td style="min-width:240px">${inp(`id="d_${i.id}" data-item="${i.id}" data-f="desc" data-nr="1"`,i.desc)}</td>
+    <td style="width:70px">${inp(`id="u_${i.id}" data-item="${i.id}" data-f="unit" data-nr="1"`,i.unit)}</td>
+    <td style="width:90px">${inp(`id="q_${i.id}" data-item="${i.id}" data-f="qty" inputmode="decimal"`,i.qty,'r')}</td>
+    <td style="width:100px">${inp(`id="r_${i.id}" data-item="${i.id}" data-f="rate" inputmode="decimal"`,i.rate,'r')}</td>
+    <td class="num">${R(tot(i))}</td>
+    <td style="min-width:190px">${sel(`data-item="${i.id}" data-f="ph" aria-label="Work section"`,phaseOpts,i.ph)}</td>
+    <td style="min-width:170px">${sel(`data-item="${i.id}" data-f="cat" aria-label="Category"`,catOpts,i.cat)}</td>
+    <td>${!(i.rate>0)?'<span class="chip warn">No rate</span> ':''}<button class="btn sm danger" data-act="${ui.confirm==='item:'+i.id?'delItemYes':'delItem'}" data-arg="${i.id}" type="button">${ui.confirm==='item:'+i.id?'Sure?':'Delete'}</button></td></tr>`).join('');
+  return `<div class="row">
+   <label class="field" style="min-width:220px;flex:1">Project name${inp('id="p_name" data-k="name" data-nr="1"',P.name)}</label>
+   <label class="field" style="min-width:180px;flex:1">Client${inp('id="p_client" data-k="client" data-nr="1"',P.client)}</label>
+   <label class="field" style="min-width:220px;flex:1">Site (suburb or town)${inp('id="p_site" data-k="site" data-nr="1"',P.site)}</label></div>
+  <h2 style="margin-top:22px">Bill of quantities</h2>
+  <p class="hint">Bring in your BOQ from Excel or CSV, or paste the table. Each line is placed in a work section and a supplier category, which builds the programme and the supplier search. Check them and change any that are wrong.</p>
+  <div class="drop"><div class="row" style="align-items:center">
+   <label class="btn primary" for="boqfile">Choose BOQ file</label><input id="boqfile" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsm,.pdf,.docx,.jpg,.jpeg,.png" style="position:absolute;opacity:0;width:1px;height:1px">
+   <span class="small muted">Excel, CSV or text. Everything stays on this device.</span></div>
+   ${ui.impMsg?`<p class="small neg" style="margin:10px 0 0">${esc(ui.impMsg)}</p>`:''}
+   <details style="margin:8px 0 0"><summary style="font-size:15px;margin-block:8px">Or paste a table</summary>
+   <textarea id="pastebox" rows="5" style="width:100%;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px;font-family:var(--f-mono);font-size:12.5px;color:var(--ink)" placeholder="Description, Unit, Qty, Rate&#10;Excavate trenches, m3, 42, 185"></textarea>
+   <button class="btn" data-act="impPaste" type="button" style="margin-top:8px">Read pasted table</button></details></div>
+  ${impHtml}
+  <div class="row" style="margin-block:18px 10px;justify-content:space-between;align-items:center"><h3>${P.items.length} lines</h3><div class="row"><button class="btn" data-act="addItem" type="button">Add a line</button></div></div>
+  ${P.items.length?`<div class="tablewrap"><table style="min-width:1000px"><thead><tr><th>#</th><th>Description</th><th>Unit</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount</th><th>Work section</th><th>Category</th><th></th></tr></thead><tbody>${rows}</tbody>
+   <tfoot><tr><td colspan="5">BOQ total, excluding VAT</td><td class="num">${R(c.budget)}</td><td colspan="3"></td></tr></tfoot></table></div>`:`<div class="card" style="text-align:center"><p>No lines yet. Choose a file, paste a table, or add a line by hand.</p><button class="btn primary" data-act="loadSample" type="button">Load the sample house</button></div>`}`;
+}
+
+/* ---- tab 2 programme ---- */
+function tabProg(P,c){
+  const {t,end,days}=c.sch;
+  if(!end)return `<h2>Programme</h2><p class="hint">Add BOQ lines first. The programme is built from the work sections they fall in.</p>`;
+  const ticks=[];for(let w=0;w<=Math.ceil(end/5);w+=4){const di=Math.min(w*5,days.length-1);ticks.push(`<span style="left:${w*5/end*100}%">${fmtDs(days[di])}</span>`)}
+  const act=PHASES.filter(p=>t[p.id].on);
+  const rows=act.map(p=>{const x=t[p.id];return `<div class="g-row"><div class="g-name">${p.id}. ${p.name}</div><div class="g-track" style="--wk:${5/end*100}%"><div class="g-bar ${x.crit?'crit':''}" style="left:${x.es/end*100}%;width:${x.d/end*100}%" title="${p.name}: ${fmtDs(days[x.es])} to ${fmtDs(days[x.ef-1])}">${x.d}d</div></div></div>`}).join('');
+  const det=act.map(p=>{const x=t[p.id];return `<tr><td>${p.id}. ${p.name}</td><td style="width:90px">${inp(`id="phd_${p.id}" data-phd="${p.id}" inputmode="numeric"`,x.d,'r')}</td><td>${fmtD(days[x.es])}</td><td>${fmtD(days[x.ef-1])}</td><td>${x.crit?'<span class="chip acc">Critical</span>':`<span class="muted">${x.slack}d float</span>`}</td><td>${x.ov?'<button class="btn sm" data-act="resetDays" data-arg="'+p.id+'" type="button">Reset</button>':'<span class="muted small">Estimated</span>'}</td></tr>`}).join('');
+  return `<h2>Programme</h2>
+  <p class="hint">Durations start from typical times for a house of this size, then scale with your BOQ value. Change a duration to what you expect and everything moves.</p>
+  <div class="row">
+   <label class="field">Start date<input type="date" id="p_start" data-k="start" value="${esc(P.start)}"></label>
+   <label class="field">Crew pace${sel('id="p_pace" data-k="pace" data-n="1"',[[1.15,'Small crew (+15%)'],[1,'Normal crew'],[0.85,'Extra team (-15%)']],P.pace)}</label>
+   <label class="check"><input type="checkbox" id="p_weather" data-k="weather" ${P.weather?'checked':''}> Rain allowance (+10%)</label>
+   <label class="check"><input type="checkbox" id="p_xmas" data-k="xmas" ${P.xmas?'checked':''}> Builders' break, 15 Dec to 12 Jan</label></div>
+  <div class="stats"><div class="stat"><div class="eyebrow">Working days</div><div class="v">${end}</div></div><div class="stat"><div class="eyebrow">Duration</div><div class="v">${c.planWeeks.toFixed(1)} weeks</div></div><div class="stat"><div class="eyebrow">Practical completion</div><div class="v">${fmtDs(days[end-1])} ${days[end-1].getFullYear()}</div></div><div class="stat"><div class="eyebrow">Critical phases</div><div class="v">${act.filter(p=>t[p.id].crit).length} of ${act.length}</div></div></div>
+  <div class="tablewrap" style="padding:14px"><div class="gantt"><div class="g-head"><div>Phase</div><div class="g-axis">${ticks.join('')}</div></div>${rows}</div></div>
+  <div class="legend"><span><i class="sw" style="background:var(--accent)"></i>Critical path: a delay here delays handover</span><span><i class="sw" style="background:var(--bar)"></i>Has float</span></div>
+  <h3 style="margin-top:22px">Phase durations</h3>
+  <div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>Phase</th><th class="r">Days</th><th>Start</th><th>Finish</th><th>Float</th><th></th></tr></thead><tbody>${det}</tbody></table></div>`;
+}
+
+/* ---- contact buttons ---- */
+function contactHtml(s){
+  return `<div class="contact"><span class="mono">${esc(s.phone||'No phone')}</span>${s.phone?`<button class="btn sm" data-act="copy" data-arg="${esc(s.phone)}" type="button">Copy</button><a class="btn sm" href="tel:${esc(String(s.phone).replace(/\s/g,''))}">Call</a><a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/${waNumber(s.phone)}">WhatsApp</a>`:''}</div>
+  <div class="contact"><span class="mono">${esc(s.email||'No email')}</span>${s.email?`<button class="btn sm" data-act="copy" data-arg="${esc(s.email)}" type="button">Copy</button>`:''}</div>`;
+}
+function rfqText(P,c,s){
+  const lines=P.items.filter(i=>s.cats.includes(i.cat));
+  const subject=`Quote request – ${P.name||'project'}${P.site?', '+P.site:''}`;
+  const body=`Hi ${s.name.split(' ')[0]} team,
+
+Please quote delivered to site${P.site?' ('+P.site+')':''} for:
+
+${lines.map(i=>`- ${i.desc}: ${i.qty.toLocaleString('en-ZA')} ${i.unit}`).join('\n')}
+
+Please include the price per unit, delivery lead time, how long the quote is valid, and your account terms. Delivery is needed from ${c.sch.days.length?fmtD(c.sch.days[0]):'the start date'}.
+
+Thank you,
+[Your name]
+[Your company] · [Your phone]`;
+  return {subject,body,count:lines.length};
+}
+
+/* ---- tab 3 best suppliers ---- */
+function tabSup(P,c){
+  const inR=store.suppliers.filter(s=>s.km==null||s.km<=P.radius);
+  const rank=rankSuppliers(P,c);
+  const cats=[...new Set(P.items.map(i=>i.cat))];
+  const mapQ=cat=>`https://www.google.com/maps/search/${encodeURIComponent((cat==='general'?'building supplies':CATS[cat].toLowerCase())+' near '+(P.lat!=null?P.lat+','+P.lon:(P.site||'me')))}`;
+  const picks=rank.slice(0,3).map((x,n)=>`<div class="pick ${n===0?'first':''}"><div class="top"><div><div class="eyebrow">${n===0?'Call first':'Then try'}</div><h3>${esc(x.s.name)}</h3><div class="muted small">${esc(x.s.area)}${x.s.km!=null?' · '+x.s.km+' km away':''} · delivers in ${x.s.lead||'?'} day${x.s.lead>1?'s':''}</div></div><div class="rank">${n+1}</div></div>
+   <div><span class="chip good">Cheapest on ${x.n} line${x.n>1?'s':''}</span> <span class="chip good">Saves ${R(x.save)}</span></div>${contactHtml(x.s)}
+   <div class="contact"><button class="btn primary sm" data-act="rfq" data-arg="${x.s.id}" type="button">Draft quote request</button></div></div>`).join('');
+  const ask=inR.map(s=>({s,n:P.items.filter(i=>s.cats.includes(i.cat)).length})).filter(x=>x.n).sort((a,b)=>b.n-a.n||(a.s.km||0)-(b.s.km||0)).map(x=>{
+    const st=P.rfq[x.s.id];return `<tr><td><b>${esc(x.s.name)}</b><div class="muted small">${esc(x.s.area)}</div></td><td class="num">${x.s.km!=null?x.s.km+' km':'-'}</td><td class="num">${x.n} of ${P.items.length}</td><td>${esc(x.s.phone||'')}</td><td>
+    <button class="btn sm primary" data-act="rfq" data-arg="${x.s.id}" type="button">Quote request</button>
+    <button class="btn sm" data-act="markReq" data-arg="${x.s.id}" type="button">${st?'Asked ✓':'Mark as asked'}</button></td></tr>`}).join('');
+  const rows=P.items.map(i=>{const q=c.q[i.id];
+    if(!q.length)return `<tr><td>${esc(i.desc)}</td><td class="num">${i.qty.toLocaleString('en-ZA')} ${esc(i.unit)}</td><td class="num">${R2(i.rate)}</td><td colspan="3"><span class="chip warn">Needs a quote</span></td></tr>`;
+    const cell=(x,b)=>x?`<td class="${b?'best':''}"><div>${esc(x.s.name)}</div><div class="mono small">${R2(x.rate)} <span class="muted">${pct((x.rate/i.rate-1)*100)}</span></div></td>`:'<td class="muted">-</td>';
+    return `<tr><td>${esc(i.desc)}</td><td class="num">${i.qty.toLocaleString('en-ZA')} ${esc(i.unit)}</td><td class="num">${R2(i.rate)}</td>${cell(q[0],1)}${cell(q[1])}${cell(q[2])}</tr>`}).join('');
+  const r=ui.rfq?store.suppliers.find(s=>s.id===ui.rfq):null;let rfqHtml='';
+  if(r){const t=rfqText(P,c,r);const full=`To: ${r.email||''}\nSubject: ${t.subject}\n\n${t.body}`;
+   rfqHtml=`<div class="card rfq" style="border-color:var(--accent)"><div class="row" style="justify-content:space-between;align-items:center"><h3>Quote request for ${esc(r.name)} · ${t.count} lines</h3><button class="btn sm" data-act="rfqClose" type="button">Close</button></div>
+    <textarea id="rfqtxt" readonly>${esc(full)}</textarea>
+    <div class="row" style="margin-top:10px"><button class="btn primary" data-act="copyRfq" type="button">Copy email text</button>
+    ${r.email?`<a class="btn" href="mailto:${esc(r.email)}?subject=${encodeURIComponent(t.subject)}&body=${encodeURIComponent(t.body)}">Open in email app</a>`:''}
+    ${r.phone?`<a class="btn" target="_blank" rel="noopener" href="https://wa.me/${waNumber(r.phone)}?text=${encodeURIComponent(t.body)}">Send on WhatsApp</a>`:''}
+    <button class="btn" data-act="markReq" data-arg="${r.id}" type="button">${P.rfq[r.id]?'Asked ✓':'Mark as asked'}</button></div>
+    <p class="hint">The email and WhatsApp buttons open your own apps with the message filled in. Nothing is sent until you press send there. When the prices come back, enter them in the Prices tab.</p></div>`}
+  return `<h2>Best suppliers near the site</h2>
+  <p class="hint">Companies are ranked by how much they save you against the BOQ rates, using the quotes you have entered. Add your suppliers and their prices in the Prices tab.</p>
+  <div class="row">
+   <label class="field" style="min-width:240px;flex:1">Site${inp('id="p_site2" data-k="site" data-nr="1"',P.site)}</label>
+   <div class="field"><button class="btn" data-act="geo" type="button">Use my location</button><span style="max-width:260px">${esc(ui.geoMsg)||(P.lat!=null?'Saved: '+P.lat.toFixed(3)+', '+P.lon.toFixed(3):'Uses your phone or laptop once.')}</span></div>
+   <label class="field" style="min-width:220px">Search radius: <b style="color:var(--ink)">${P.radius} km</b><input id="p_radius" type="range" min="5" max="100" step="5" value="${P.radius}" data-k="radius" data-n="1"></label></div>
+  ${cats.length?`<div class="card"><div class="eyebrow">Find more suppliers near the site</div><div class="contact" style="margin-top:8px">${cats.map(k=>`<a class="btn sm" target="_blank" rel="noopener" href="${mapQ(k)}">${CATS[k]}</a>`).join('')}</div><p class="hint" style="margin-bottom:0">Opens a map search. Add the companies you like in the Prices tab.</p></div>`:''}
+  <div class="stats"><div class="stat"><div class="eyebrow">BOQ budget</div><div class="v">${R(c.budget)}</div></div><div class="stat"><div class="eyebrow">At cheapest quotes</div><div class="v">${R(c.bestCost)}</div></div><div class="stat"><div class="eyebrow">Saving</div><div class="v ${c.saving>=0?'pos':'neg'}">${R(c.saving)}</div></div><div class="stat"><div class="eyebrow">Lines needing a quote</div><div class="v ${c.needQuote?'neg':'pos'}">${c.needQuote} of ${P.items.length}</div></div></div>
+  ${rfqHtml}
+  <h3>${rank.length?'Who to call':'Who to ask for quotes'}</h3>
+  ${rank.length?`<div class="picks">${picks}</div>`:`<p class="hint">No quotes entered yet inside ${P.radius} km. Ask the companies below for prices, then enter them in the Prices tab.</p>`}
+  <h3>Request quotes</h3>
+  <div class="tablewrap" style="margin-top:10px"><table style="min-width:640px"><thead><tr><th>Company</th><th class="r">Distance</th><th class="r">Lines they cover</th><th>Phone</th><th></th></tr></thead><tbody>${ask||'<tr><td colspan="5" class="muted">No suppliers within the radius. Increase the radius or add suppliers in the Prices tab.</td></tr>'}</tbody></table></div>
+  <h3 style="margin-top:22px">Price comparison by line</h3>
+  <div class="tablewrap" style="margin-top:10px"><table style="min-width:900px"><thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Budget rate</th><th>Cheapest</th><th>2nd</th><th>3rd</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+/* ---- tab 4 prices ---- */
+function tabPri(P,c){
+  const sups=store.suppliers;
+  const sRows=sups.map(s=>`<tr>
+   <td style="min-width:200px">${inp(`id="sn_${s.id}" data-sup="${s.id}" data-f="name" data-nr="1"`,s.name)}</td>
+   <td style="min-width:120px">${inp(`id="sa_${s.id}" data-sup="${s.id}" data-f="area" data-nr="1"`,s.area)}</td>
+   <td style="width:70px">${inp(`id="sk_${s.id}" data-sup="${s.id}" data-f="km" inputmode="decimal"`,s.km==null?'':s.km,'r')}</td>
+   <td style="min-width:120px">${inp(`id="sp_${s.id}" data-sup="${s.id}" data-f="phone" data-nr="1"`,s.phone)}</td>
+   <td style="min-width:200px">${inp(`id="se_${s.id}" data-sup="${s.id}" data-f="email" data-nr="1"`,s.email)}</td>
+   <td style="width:60px">${inp(`id="sl_${s.id}" data-sup="${s.id}" data-f="lead" inputmode="numeric"`,s.lead==null?'':s.lead,'r')}</td>
+   <td><details><summary style="font-size:13px;margin:0">${s.cats.length} categories</summary><div style="display:grid;gap:4px;padding-top:6px">${catOpts.map(([k,l])=>`<label class="check small"><input type="checkbox" data-supcat="${s.id}" data-cat="${k}" ${s.cats.includes(k)?'checked':''}> ${l}</label>`).join('')}</div></details></td>
+   <td><button class="btn sm danger" data-act="${ui.confirm==='sup:'+s.id?'delSupYes':'delSup'}" data-arg="${s.id}" type="button">${ui.confirm==='sup:'+s.id?'Sure?':'Delete'}</button></td></tr>`).join('');
+  const head=sups.map(s=>`<th class="r" style="max-width:120px;white-space:normal">${esc(s.name)}</th>`).join('');
+  const mRows=P.items.map(i=>{const q=P.quotes[i.id]||{};const vals=sups.map(s=>q[s.id]).filter(v=>v>0);const mn=vals.length?Math.min(...vals):null;
+    return `<tr><td style="min-width:200px">${esc(i.desc)}<div class="muted small">${i.qty.toLocaleString('en-ZA')} ${esc(i.unit)} · budget ${R2(i.rate)}</div></td>${sups.map(s=>`<td style="width:92px">${inp(`id="qq_${i.id}_${s.id}" data-q="${i.id}|${s.id}" inputmode="decimal" aria-label="${esc(s.name)} rate for ${esc(i.desc)}"`,q[s.id]>0?q[s.id]:'','r'+(q[s.id]>0&&q[s.id]===mn&&vals.length>1?' best':''))}</td>`).join('')}</tr>`}).join('');
+  let pimp='';
+  if(ui.pimp){const p=ui.pimp;
+    pimp=`<div class="card"><h3>${p.rows.length} price lines found in ${esc(p.name)}</h3><p class="hint">Each price list line was matched to the closest BOQ line. Untick any that are wrong.</p>
+    <div class="tablewrap"><table><thead><tr><th></th><th>Price list line</th><th class="r">Price</th><th>Matched BOQ line</th></tr></thead><tbody>${p.rows.map((r,n)=>`<tr><td><input type="checkbox" data-pm="${n}" ${r.on?'checked':''}></td><td>${esc(r.desc)}</td><td class="num">${R2(r.price)}</td><td>${r.item?esc(P.items.find(i=>i.id===r.item).desc):'<span class="muted">No match</span>'}</td></tr>`).join('')}</tbody></table></div>
+    <div class="row" style="margin-top:10px"><button class="btn primary" data-act="pimpApply" type="button">Save ${p.rows.filter(r=>r.on&&r.item).length} prices</button><button class="btn" data-act="pimpCancel" type="button">Cancel</button></div></div>`;
+  }
+  return `<h2>Suppliers and prices</h2>
+  <p class="hint">Keep your suppliers here, then enter the prices they quote. The cheapest price on each line is highlighted, and the Best suppliers tab ranks the companies from this.</p>
+  <h3>My suppliers</h3>
+  <div class="tablewrap" style="margin-top:10px"><table style="min-width:980px"><thead><tr><th>Company</th><th>Area</th><th class="r">km</th><th>Phone</th><th>Email</th><th class="r">Days</th><th>Supplies</th><th></th></tr></thead><tbody>${sRows||'<tr><td colspan="8" class="muted">No suppliers yet.</td></tr>'}</tbody></table></div>
+  <div class="row" style="margin-top:10px"><button class="btn" data-act="addSup" type="button">Add a supplier</button>${store.suppliers.some(s=>s.sample)?'<button class="btn" data-act="clearSampleSups" type="button">Remove the sample suppliers</button>':''}</div>
+  <h3 style="margin-top:26px">Import a supplier price list ${pro()?'':'<span class="chip acc">Pro</span>'}</h3>
+  <p class="hint">Upload or paste a supplier's price list (description and price). The app matches lines to your BOQ and fills in that supplier's prices.</p>
+  <div class="drop"><div class="row" style="align-items:flex-end">
+   <label class="field" style="min-width:220px">Supplier${sel('id="pimpsup" data-ui="pimpSup"',store.suppliers.map(s=>[s.id,s.name]),ui.pimpSup||(store.suppliers[0]&&store.suppliers[0].id))}</label>
+   <label class="btn ${pro()?'primary':''}" for="pricefile">Choose price list</label><input id="pricefile" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" style="position:absolute;opacity:0;width:1px;height:1px">
+   <button class="btn" data-act="pimpPaste" type="button">Read pasted list</button></div>
+   <textarea id="pricepaste" rows="3" style="width:100%;margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px;font-family:var(--f-mono);font-size:12.5px;color:var(--ink)" placeholder="Clay stock bricks, 3.60&#10;Cement 50kg bag, 112.50"></textarea>
+   ${ui.pimpMsg?`<p class="small neg" style="margin:8px 0 0">${esc(ui.pimpMsg)}</p>`:''}</div>
+  ${pimp}
+  <h3 style="margin-top:26px">Price table</h3>
+  <p class="hint">Rate per unit, excluding VAT. Leave blank when a supplier has not quoted. Companies outside your search radius are ignored when ranking.</p>
+  ${sups.length&&P.items.length?`<div class="tablewrap"><table style="min-width:${220+sups.length*100}px"><thead><tr><th>Item</th>${head}</tr></thead><tbody>${mRows}</tbody></table></div>`:'<p class="muted">Add BOQ lines and suppliers first.</p>'}`;
+}
+
+/* ---- tab 5 profit and loss ---- */
+function tabPL(P,c){
+  const good=c.profit>=0,under=(c.totalCost)<=c.totalBudget;
+  const oh=c.actOH-c.planOH;
+  const tradeRows=PHASES.filter(p=>P.items.some(i=>i.ph===p.id)).map(p=>{const its=P.items.filter(i=>i.ph===p.id);const b=its.reduce((a,i)=>a+tot(i),0),f=its.reduce((s,i)=>s+c.L[i.id].fc,0),v=b-f;
+    return `<tr><td>${p.id}. ${p.name}</td><td class="num">${R(b)}</td><td class="num">${R(f)}</td><td class="num ${v>=0?'pos':'neg'}">${R(v)}</td><td>${v>=0?'<span class="chip good">Under</span>':'<span class="chip bad">Over</span>'}</td></tr>`}).join('');
+  const chip=s=>s==='paid'?'<span class="chip good">Paid</span>':s==='quoted'?'<span class="chip acc">Quoted</span>':'<span class="chip mute">Budget</span>';
+  const lineRows=P.items.map(i=>{const l=c.L[i.id];return `<tr><td>${esc(i.desc)}</td><td class="num">${R(tot(i))}</td><td class="num">${R(l.fc)}</td><td style="width:130px">${inp(`id="pd_${i.id}" data-paid="${i.id}" inputmode="decimal" placeholder="${Math.round(l.fc)}"`,l.paid==null?'':l.paid,'r')}</td><td>${chip(l.state)}</td><td class="num ${tot(i)>=l.fc?'pos':'neg'}">${tot(i)?pct((l.fc/tot(i)-1)*100):'-'}</td></tr>`}).join('');
+  const vRows=P.variations.map(v=>`<tr><td>${inp(`id="vd_${v.id}" data-var="${v.id}" data-f="desc" data-nr="1"`,v.desc)}</td><td style="width:130px">${inp(`id="vi_${v.id}" data-var="${v.id}" data-f="income" inputmode="decimal"`,v.income,'r')}</td><td style="width:130px">${inp(`id="vc_${v.id}" data-var="${v.id}" data-f="cost" inputmode="decimal"`,v.cost,'r')}</td><td><button class="btn sm danger" data-act="delVar" data-arg="${v.id}" type="button">Delete</button></td></tr>`).join('');
+  return `<h2>Profit and loss</h2>
+  <p class="hint">Each line counts at the amount you paid. Where nothing is paid yet it uses the best quote, and where there is no quote it uses the BOQ budget. Profit is the contract price plus variations, less all of that, less site running costs for the full duration.</p>
+  <div class="pl"><div>
+   <div class="verdict ${good?'good':'bad'}"><div class="eyebrow">${good?'You are making money':'You are losing money'}</div><div class="big">${R(c.profit)}</div>
+    <div style="margin-top:4px">${((c.profit/Math.max(1,c.contract+c.varIncome))*100).toFixed(1)}% margin · planned ${R(c.plannedProfit)}</div>
+    <div style="margin-top:10px"><span class="chip ${under?'good':'bad'}">${under?'Under budget by '+R(c.totalBudget-c.totalCost):'Over budget by '+R(c.totalCost-c.totalBudget)}</span></div>
+    <table class="ledger"><tbody>
+     <tr><td>Contract price (excl. VAT)</td><td class="num">${R(c.contract)}</td></tr>
+     <tr><td>Variations, income</td><td class="num">${R(c.varIncome)}</td></tr>
+     <tr><td class="muted">Materials and subcontract</td><td class="num">-${R(c.forecast)}</td></tr>
+     <tr><td class="muted">Site costs, ${c.actWeeks.toFixed(1)} weeks</td><td class="num">-${R(c.actOH)}</td></tr>
+     <tr><td class="muted">Variations, cost</td><td class="num">-${R(c.varCost)}</td></tr>
+     <tr class="t"><td>${good?'Profit':'Loss'}</td><td class="num ${good?'pos':'neg'}">${R(c.profit)}</td></tr>
+     ${P.vat?`<tr><td class="muted small">Client pays with 15% VAT</td><td class="num muted small">${R((c.contract+c.varIncome)*1.15)}</td></tr>`:''}
+    </tbody></table></div>
+   <div class="row" style="margin-top:16px">
+    <label class="field">Mark-up over budget %${inp('id="p_markup" data-k="markup" data-n="1" inputmode="decimal"',P.markup,'')}</label>
+    <label class="field">Site costs per week (R)${inp('id="p_overhead" data-k="overhead" data-n="1" inputmode="decimal"',P.overhead,'')}</label>
+    <label class="field">Delay (working days)${inp('id="p_delay" data-k="delay" data-n="1" inputmode="numeric"',P.delay,'')}</label>
+    <label class="check"><input type="checkbox" id="p_vat" data-k="vat" ${P.vat?'checked':''}> Show price with VAT</label></div>
+   <p class="hint" style="margin-top:12px">${P.delay>0?`Running ${P.delay} days late costs ${R(oh)} in extra site costs. `:''}Budgeted site costs: ${R(c.planOH)}.</p>
+  </div><div>
+   <h3>Money out over time</h3>
+   <div class="legend" style="margin:4px 0 6px"><span><i class="sw" style="background:var(--bar)"></i>Planned spend</span><span><i class="sw" style="background:var(--accent)"></i>Forecast and actual</span><span><i class="sw" style="background:var(--good)"></i>Contract price</span></div>
+   ${chartSVG(P,c)}
+   <label class="field" style="margin-top:8px">Show up to week: <b style="color:var(--ink)">${Math.min(P.status,Math.ceil(c.actWeeks)||1)}</b><input type="range" id="p_status" data-k="status" data-n="1" min="1" max="${Math.max(1,Math.ceil(c.actWeeks))}" value="${Math.min(P.status,Math.max(1,Math.ceil(c.actWeeks)))}"></label>
+  </div></div>
+  <h3 style="margin-top:26px">By work section</h3>
+  <div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>Section</th><th class="r">Budget</th><th class="r">Cost</th><th class="r">Difference</th><th>Status</th></tr></thead><tbody>${tradeRows}</tbody><tfoot><tr><td>Materials and subcontract</td><td class="num">${R(c.budget)}</td><td class="num">${R(c.forecast)}</td><td class="num ${c.budget>=c.forecast?'pos':'neg'}">${R(c.budget-c.forecast)}</td><td></td></tr></tfoot></table></div>
+  <h3 style="margin-top:26px">Enter what you paid</h3>
+  <p class="hint">Type the amount paid for the whole line. Clear the box to go back to the quote.</p>
+  <div class="tablewrap"><table style="min-width:720px"><thead><tr><th>Item</th><th class="r">Budget</th><th class="r">Counted</th><th class="r">Paid (R)</th><th>Based on</th><th class="r">vs budget</th></tr></thead><tbody>${lineRows}</tbody></table></div>
+  <h3 style="margin-top:26px">Variations (extra work)</h3>
+  <p class="hint">Extra work the client agreed to pay for. Income is what you charge, cost is what it costs you.</p>
+  ${P.variations.length?`<div class="tablewrap"><table><thead><tr><th>Description</th><th class="r">Income</th><th class="r">Cost</th><th></th></tr></thead><tbody>${vRows}</tbody></table></div>`:''}
+  <button class="btn" style="margin-top:10px" data-act="addVar" type="button">Add a variation</button>`;
+}
+
+/* ---- tab 6 report ---- */
+function summaryText(P,c){
+  const end=c.sch.end?fmtD(c.sch.days[c.sch.end-1]):'-';const rank=rankSuppliers(P,c).slice(0,3);
+  return `${P.name} – ${P.client||'no client'} – ${P.site||'no site'}
+BOQ budget: ${R(c.budget)}
+Cost at best quotes: ${R(c.bestCost)} (saving ${R(c.saving)})
+Forecast cost incl. site costs: ${R(c.totalCost)}
+Contract price: ${R(c.contract)} (excl. VAT)
+Projected profit: ${R(c.profit)}
+Duration: ${c.planWeeks.toFixed(1)} weeks, start ${P.start}, handover ${end}
+Top suppliers: ${rank.length?rank.map(x=>x.s.name+' ('+(x.s.phone||'')+')').join('; '):'none quoted yet'}`;
+}
+function tabRep(P,c){
+  const rank=rankSuppliers(P,c).slice(0,3);const end=c.sch.end?c.sch.days[c.sch.end-1]:null;
+  const prog=PHASES.filter(p=>c.sch.t[p.id].on).map(p=>{const x=c.sch.t[p.id];return `<tr><td>${p.name}</td><td class="num">${x.d}</td><td>${fmtD(c.sch.days[x.es])}</td><td>${fmtD(c.sch.days[x.ef-1])}</td></tr>`}).join('');
+  return `<div class="row noprint" style="justify-content:space-between;align-items:center"><h2>Project report</h2><div class="row">
+   <button class="btn" data-act="copySummary" type="button">Copy summary</button>
+   <button class="btn ${pro()?'primary':''}" data-act="print" type="button">Print or save as PDF ${pro()?'':'· Pro'}</button>
+   <button class="btn" data-act="exportBOQ" type="button">BOQ as CSV ${pro()?'':'· Pro'}</button>
+   <button class="btn" data-act="exportCmp" type="button">Comparison as CSV ${pro()?'':'· Pro'}</button></div></div>
+  <h1 style="margin-top:14px">${esc(P.name)}</h1><div class="muted">${esc(P.client)} ${P.site?'· '+esc(P.site):''} · ${fmtD(new Date())}</div>
+  <div class="stats"><div class="stat"><div class="eyebrow">BOQ budget</div><div class="v">${R(c.budget)}</div></div><div class="stat"><div class="eyebrow">Contract price</div><div class="v">${R(c.contract)}</div></div><div class="stat"><div class="eyebrow">Forecast cost</div><div class="v">${R(c.totalCost)}</div></div><div class="stat"><div class="eyebrow">Projected profit</div><div class="v ${c.profit>=0?'pos':'neg'}">${R(c.profit)}</div></div></div>
+  <h3>Programme</h3><p class="muted">${c.planWeeks.toFixed(1)} weeks from ${P.start}${end?', handover '+fmtD(end):''}.</p>
+  <div class="tablewrap" style="margin-block:10px 20px"><table><thead><tr><th>Phase</th><th class="r">Days</th><th>Start</th><th>Finish</th></tr></thead><tbody>${prog}</tbody></table></div>
+  <h3>Suppliers to contact</h3>
+  <div class="tablewrap" style="margin-block:10px 20px"><table><thead><tr><th>Company</th><th class="r">Lines won</th><th class="r">Saving</th><th>Phone</th><th>Email</th></tr></thead><tbody>${rank.map(x=>`<tr><td>${esc(x.s.name)}</td><td class="num">${x.n}</td><td class="num">${R(x.save)}</td><td>${esc(x.s.phone)}</td><td>${esc(x.s.email)}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">No quotes entered yet.</td></tr>'}</tbody></table></div>
+  <h3>Profit and loss</h3>
+  <table class="ledger" style="max-width:420px"><tbody><tr><td>Contract price</td><td class="num">${R(c.contract)}</td></tr><tr><td>Variations, income</td><td class="num">${R(c.varIncome)}</td></tr><tr><td>Materials and subcontract</td><td class="num">-${R(c.forecast)}</td></tr><tr><td>Site costs</td><td class="num">-${R(c.actOH)}</td></tr><tr><td>Variations, cost</td><td class="num">-${R(c.varCost)}</td></tr><tr class="t"><td>${c.profit>=0?'Profit':'Loss'}</td><td class="num ${c.profit>=0?'pos':'neg'}">${R(c.profit)}</td></tr></tbody></table>
+  <div style="margin-top:14px">${chartSVG(P,c)}</div>`;
+}
+
+/* ---- projects & plans views ---- */
+function viewProjects(){
+  const rows=store.projects.map(p=>{const c=calc(p);return `<tr><td><b>${esc(p.name)}</b>${p.sample?' <span class="chip mute">Sample</span>':''}<div class="muted small">${esc(p.client)} ${esc(p.site)}</div></td><td class="num">${p.items.length}</td><td class="num">${R(c.budget)}</td><td class="num ${c.profit>=0?'pos':'neg'}">${R(c.profit)}</td><td>
+   <button class="btn sm primary" data-act="openProj" data-arg="${p.id}" type="button">Open</button>
+   <button class="btn sm" data-act="dupProj" data-arg="${p.id}" type="button">Copy${pro()?'':' · Pro'}</button>
+   <button class="btn sm danger" data-act="${ui.confirm==='proj:'+p.id?'delProjYes':'delProj'}" data-arg="${p.id}" type="button">${ui.confirm==='proj:'+p.id?'Sure?':'Delete'}</button></td></tr>`}).join('');
+  return `<div class="panel solo"><div class="row" style="justify-content:space-between;align-items:center"><h2>Projects</h2><div class="row"><button class="btn primary" data-act="newProj" type="button">New project</button><button class="btn" data-act="view" data-arg="app" type="button">Back</button></div></div>
+  <p class="hint">${pro()?'Your plan has no project limit.':'The Free plan keeps one project. Upgrade for unlimited projects.'}</p>
+  <div class="tablewrap"><table style="min-width:640px"><thead><tr><th>Project</th><th class="r">Lines</th><th class="r">Budget</th><th class="r">Profit</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+  <h3 style="margin-top:26px">Your data</h3>
+  <p class="hint">Everything is stored on this device, in this browser. Back it up so you can move it to another device or recover it.</p>
+  <div class="row"><button class="btn" data-act="backupCopy" type="button">Copy backup</button><button class="btn" data-act="backupSave" type="button">Save backup file</button></div>
+  <label class="field" style="margin-top:14px">Restore from a backup (paste it here)<textarea id="restorebox" rows="3" style="font-family:var(--f-mono);font-size:12px"></textarea></label>
+  <button class="btn" style="margin-top:8px" data-act="restore" type="button">Restore</button></div>`;
+}
+function viewPlans(){
+  const p=store.plan;
+  const card=(id,name,price,feat,note)=>`<div class="plan ${p===id?'on':''}"><div class="eyebrow">${name}</div><div class="price">${price}</div><ul>${feat.map(f=>`<li>${f}</li>`).join('')}</ul><div style="flex:1"></div>${note?`<p class="small muted" style="margin:0">${note}</p>`:''}
+   <button class="btn ${p===id?'':'primary'}" data-act="plan" data-arg="${id}" type="button" ${p===id?'disabled':''}>${p===id?'Your plan':(id==='free'?'Switch to Free':'Try '+name+' (demo)')}</button></div>`;
+  return `<div class="panel solo"><div class="row" style="justify-content:space-between;align-items:center"><h2>Plans</h2><button class="btn" data-act="view" data-arg="app" type="button">Back</button></div>
+  <p class="hint">Prices are placeholders to show how the plans will look. Buttons here switch plans for testing only. No payment is taken.</p>
+  <div class="plans">
+   ${card('free','Free','R0',['1 project','BOQ import from Excel, CSV or paste','Programme and critical path','Supplier ranking and quote emails','Profit and loss with variations','Copy summary'],'')}
+   ${card('pro','Pro','R249<span style="font-size:16px"> /month</span>',['Unlimited projects','Supplier price-list import','Print and PDF reports','CSV exports','Backups and project copies','Priority support'],'Planned price. Billed monthly, cancel any time.')}
+   ${card('business','Business','R599<span style="font-size:16px"> /month</span>',['Everything in Pro','Up to 5 team members','Shared supplier book','Company logo on reports','Cloud sync across devices'],'Planned. Needs the online version (accounts and sync).')}
+  </div></div>`;
+}
+
+/* ================= render ================= */
+function render(){
+  const P=cur();const c=calc(P);
+  const a=document.activeElement;const fid=a&&a.id;const keep=a&&a.value;let ss=null,se=null;try{ss=a.selectionStart;se=a.selectionEnd}catch(e){}
+  const sc=window.scrollY;
+  let body='';
+  if(ui.view==='projects')body=viewProjects();
+  else if(ui.view==='plans')body=viewPlans();
+  else{
+    const fn={boq:tabBOQ,prog:tabProg,sup:tabSup,pri:tabPri,pl:tabPL,rep:tabRep}[ui.tab];
+    body=renderStrip(P,c)+`<nav class="steps noprint" role="tablist">${TABS.map((t,n)=>`<button role="tab" data-act="tab" data-arg="${t[0]}" aria-selected="${ui.tab===t[0]}"><span class="n">${n+1}</span>${t[1]}</button>`).join('')}</nav><section class="panel">${fn(P,c)}</section>`;
+  }
+  $('#app').innerHTML=renderHeader(P)+(P.sample&&ui.view==='app'?`<div class="banner noprint"><span>This is a sample project with made-up suppliers and prices, so you can see how everything works.</span><span><button class="btn sm" data-act="newBlank" type="button">Clear it and start my own</button></span></div>`:'')+body;
+  if(fid){const el=document.getElementById(fid);if(el){if(keep!==undefined&&el.tagName==='INPUT'&&el.type==='text')el.value=keep;el.focus({preventScroll:true});try{if(ss!=null)el.setSelectionRange(ss,se)}catch(e){}}}
+  window.scrollTo(0,sc);
+}
+
+/* ================= events ================= */
+function applyField(obj,f,t){
+  if(['qty','rate','km','lead','income','cost'].includes(f)){const n=num(t.value);obj[f]=n===null?(f==='km'||f==='lead'?null:0):n}
+  else if(f==='ph')obj[f]=+t.value;else obj[f]=t.value;
+}
+document.addEventListener('input',e=>{
+  const t=e.target,d=t.dataset,P=cur();let renderIt=!d.nr;
+  if(d.k){const k=d.k;let v=t.type==='checkbox'?t.checked:t.value;if(d.n!==undefined){v=num(v);if(v===null)v=0}P[k]=v}
+  else if(d.item){const it=P.items.find(i=>i.id===d.item);if(it)applyField(it,d.f,t)}
+  else if(d.paid){if(t.value.trim()==='')delete P.actual[d.paid];else{const n=num(t.value);if(n!==null)P.actual[d.paid]=n}}
+  else if(d.q){const [iid,sid]=d.q.split('|');const n=num(t.value);P.quotes[iid]=P.quotes[iid]||{};if(n>0)P.quotes[iid][sid]=n;else delete P.quotes[iid][sid]}
+  else if(d.sup){const s=store.suppliers.find(x=>x.id===d.sup);if(s)applyField(s,d.f,t)}
+  else if(d.supcat){const s=store.suppliers.find(x=>x.id===d.supcat);if(s){s.cats=s.cats.filter(k=>k!==d.cat);if(t.checked)s.cats.push(d.cat)}}
+  else if(d.var){const v=P.variations.find(x=>x.id===d.var);if(v)applyField(v,d.f,t)}
+  else if(d.phd){const n=num(t.value);if(n>0)P.phaseDays[d.phd]=Math.round(n);else delete P.phaseDays[d.phd]}
+  else if(d.ui){ui[d.ui]=t.value;if(d.ui==='impMode'&&ui.imp)ui.imp.mode=t.value;renderIt=true}
+  else if(d.pm!==undefined){ui.pimp.rows[+d.pm].on=t.checked}
+  else return;
+  saveStore();if(renderIt)render();
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.nr){saveStore();render();return}
+  if(t.id==='boqfile'&&t.files[0])handleBOQFile(t.files[0]);
+  if(t.id==='pricefile'&&t.files[0])handlePriceFile(t.files[0]);
+  if(t.dataset.act==='openSel'){store.cur=t.value;ui.imp=null;ui.rfq=null;saveStore();render()}
+  if(t.dataset.ui==='impMode'&&ui.imp)ui.imp.mode=t.value;
+});
+async function handleBOQFile(f){
+  ui.impMsg='';
+  try{const rows=await readFileRows(f);const m=mapBOQ(rows);
+    if(!m.items.length){ui.impMsg='No lines with a description and a quantity were found. Check that the file has columns for description, quantity and rate.';ui.imp=null}
+    else ui.imp={name:f.name,items:m.items,note:m.note,mode:cur().items.length?'append':'replace'};
+  }catch(err){ui.impMsg=err.message;ui.imp=null}
+  render();
+}
+function tokens(s){const stop=new Set(['and','the','for','with','supply','supplied','fix','fixed','incl','including','per','each','all','from']);return new Set(String(s).toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>2&&!stop.has(w)).map(w=>w.length>4?w.slice(0,4):w.replace(/s$/,'')))}
+function buildPriceImport(name,rows){
+  const P=cur();const out=[];
+  rows.forEach(r=>{
+    const cells=r.map(c=>c==null?'':c);let price=null,pi=-1;
+    for(let i=cells.length-1;i>=0;i--){const n=num(cells[i]);if(n!==null&&n>0){price=n;pi=i;break}}
+    const desc=cells.find((c,i)=>i!==pi&&String(c).trim().length>2&&num(c)===null);
+    if(price===null||!desc)return;
+    const a=tokens(desc);let best=null,bs=0;
+    P.items.forEach(it=>{const b=tokens(it.desc);let k=0;a.forEach(w=>{if(b.has(w))k++});const s=k/Math.max(1,Math.min(a.size,b.size));if(k>=1&&s>bs){bs=s;best=it.id}});
+    out.push({desc:String(desc).trim(),price,item:bs>=0.5?best:null,on:bs>=0.5});
+  });
+  return out.length?{name,rows:out}:null;
+}
+async function handlePriceFile(f){
+  if(!pro()){ui.pimpMsg='Price-list import is part of Pro.';render();return}
+  ui.pimpMsg='';
+  try{const rows=await readFileRows(f);ui.pimp=buildPriceImport(f.name,rows);if(!ui.pimp)ui.pimpMsg='No description and price pairs were found.'}
+  catch(err){ui.pimpMsg=err.message}
+  render();
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b||b.tagName==='SELECT')return;
+  const act=b.dataset.act,arg=b.dataset.arg,P=cur();
+  const lockIt=m=>{toast(m);ui.view='plans';render()};
+  switch(act){
+   case 'tab':ui.tab=arg;ui.confirm='';render();break;
+   case 'view':ui.view=arg;ui.confirm='';render();break;
+   case 'theme':{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark';break}
+   case 'copy':copyText(arg);break;
+   case 'newBlank':{const p=blankProject('My project');if(P.sample){store.projects=store.projects.filter(x=>x.id!==P.id)}store.projects.push(p);store.cur=p.id;ui.tab='boq';saveStore();render();break}
+   case 'newProj':{if(!pro()&&store.projects.length>=1){
+       if(P.sample&&store.projects.length===1){const p=blankProject('My project');store.projects=[p];store.cur=p.id;ui.view='app';ui.tab='boq';saveStore();render()}
+       else lockIt('The Free plan keeps one project. Upgrade to add more.');break}
+     const p=blankProject('New project');store.projects.push(p);store.cur=p.id;ui.view='app';ui.tab='boq';saveStore();render();break}
+   case 'loadSample':{if(!store.suppliers.length)store.suppliers=sampleSuppliers();const p=sampleProject(store.suppliers);P.items=p.items;P.quotes=p.quotes;P.sample=true;P.name=P.name==='New project'||P.name==='My project'?'Smith residence':P.name;saveStore();render();break}
+   case 'openProj':store.cur=arg;ui.view='app';ui.imp=null;ui.rfq=null;saveStore();render();break;
+   case 'dupProj':{if(!pro())return lockIt('Copying projects is part of Pro.');const s=store.projects.find(x=>x.id===arg);const p=JSON.parse(JSON.stringify(s));p.id=uid();p.name=s.name+' copy';p.sample=false;store.projects.push(p);saveStore();render();break}
+   case 'delProj':ui.confirm='proj:'+arg;render();break;
+   case 'delProjYes':{store.projects=store.projects.filter(x=>x.id!==arg);if(!store.projects.length)store.projects.push(blankProject('My project'));store.cur=store.projects[0].id;ui.confirm='';saveStore();render();break}
+   case 'plan':store.plan=arg;saveStore();toast('Plan switched to '+arg+' (demo only, no payment taken)');render();break;
+   case 'addItem':{const it={id:'i'+uid(),desc:'',unit:'no.',qty:1,rate:0,ph:4,cat:'general'};P.items.push(it);saveStore();render();const el=document.getElementById('d_'+it.id);if(el)el.focus();break}
+   case 'delItem':ui.confirm='item:'+arg;render();break;
+   case 'delItemYes':P.items=P.items.filter(i=>i.id!==arg);delete P.quotes[arg];delete P.actual[arg];ui.confirm='';saveStore();render();break;
+   case 'impPaste':{const t=$('#pastebox').value;if(!t.trim()){ui.impMsg='Paste a table first.';render();break}
+     const m=mapBOQ(parseCSV(t));ui.impMsg=m.items.length?'':'No lines with a description and a quantity were found.';ui.imp=m.items.length?{name:'pasted table',items:m.items,note:m.note,mode:P.items.length?'append':'replace'}:null;render();break}
+   case 'impApply':{const im=ui.imp;if(im.mode==='replace'){P.items=im.items;P.quotes={};P.actual={};P.phaseDays={}}else P.items=P.items.concat(im.items);
+     P.sample=false;ui.imp=null;ui.impMsg='';saveStore();toast('Imported '+im.items.length+' lines');render();break}
+   case 'impCancel':ui.imp=null;render();break;
+   case 'geo':{
+     const fail=m=>{ui.geoMsg=m;render()};
+     if(!navigator.geolocation)return fail('Location is not available here. Type the suburb instead.');
+     ui.geoMsg='Asking your device…';render();
+     navigator.geolocation.getCurrentPosition(p=>{P.lat=p.coords.latitude;P.lon=p.coords.longitude;if(!P.site)P.site=P.lat.toFixed(4)+', '+P.lon.toFixed(4);ui.geoMsg='Located, accurate to about '+Math.round(p.coords.accuracy)+' m.';saveStore();render()},
+       ()=>fail('Location was not allowed or is blocked here. Type the suburb instead.'),{timeout:8000});break}
+   case 'rfq':ui.rfq=arg;render();setTimeout(()=>{const x=$('#rfqtxt');if(x)x.scrollIntoView({behavior:'smooth',block:'center'})},30);break;
+   case 'rfqClose':ui.rfq=null;render();break;
+   case 'copyRfq':copyText($('#rfqtxt').value,'Email text copied');break;
+   case 'markReq':P.rfq[arg]=!P.rfq[arg];saveStore();render();break;
+   case 'addSup':store.suppliers.push({id:'s'+uid(),name:'New supplier',area:'',km:null,phone:'',email:'',lead:null,cats:['general']});saveStore();render();break;
+   case 'delSup':ui.confirm='sup:'+arg;render();break;
+   case 'delSupYes':store.suppliers=store.suppliers.filter(s=>s.id!==arg);store.projects.forEach(p=>Object.values(p.quotes).forEach(q=>delete q[arg]));ui.confirm='';saveStore();render();break;
+   case 'clearSampleSups':{const ids=store.suppliers.filter(s=>s.sample).map(s=>s.id);store.suppliers=store.suppliers.filter(s=>!s.sample);store.projects.forEach(p=>Object.values(p.quotes).forEach(q=>ids.forEach(i=>delete q[i])));saveStore();render();break}
+   case 'pimpPaste':{if(!pro())return lockIt('Price-list import is part of Pro.');const t=$('#pricepaste').value;ui.pimpMsg='';ui.pimp=buildPriceImport('pasted list',parseCSV(t));if(!ui.pimp)ui.pimpMsg='No description and price pairs were found.';render();break}
+   case 'pimpApply':{const sid=ui.pimpSup||(store.suppliers[0]&&store.suppliers[0].id);let n=0;ui.pimp.rows.forEach(r=>{if(r.on&&r.item){P.quotes[r.item]=P.quotes[r.item]||{};P.quotes[r.item][sid]=r.price;n++}});ui.pimp=null;saveStore();toast('Saved '+n+' prices');render();break}
+   case 'pimpCancel':ui.pimp=null;render();break;
+   case 'resetDays':delete P.phaseDays[arg];saveStore();render();break;
+   case 'addVar':P.variations.push({id:'v'+uid(),desc:'',income:0,cost:0});saveStore();render();break;
+   case 'delVar':P.variations=P.variations.filter(v=>v.id!==arg);saveStore();render();break;
+   case 'copySummary':copyText(summaryText(P,calc(P)),'Summary copied');break;
+   case 'print':if(!pro())return lockIt('Printing reports is part of Pro.');window.print();break;
+   case 'exportBOQ':{if(!pro())return lockIt('CSV export is part of Pro.');
+     saveText((P.name||'boq')+' BOQ.csv',toCSV([['Ref','Description','Unit','Qty','Rate','Amount','Work section','Category'],...P.items.map((i,n)=>[n+1,i.desc,i.unit,i.qty,i.rate,tot(i),PHASES.find(p=>p.id===i.ph).name,CATS[i.cat]])]),'text/csv');break}
+   case 'exportCmp':{if(!pro())return lockIt('CSV export is part of Pro.');const c=calc(P);
+     saveText((P.name||'project')+' comparison.csv',toCSV([['Item','Qty','Unit','Budget rate','Best supplier','Best rate','Saving'],...P.items.map(i=>{const w=c.q[i.id][0];return [i.desc,i.qty,i.unit,i.rate,w?w.s.name:'',w?w.rate:'',w?tot(i)-w.total:'']})]),'text/csv');break}
+   case 'backupCopy':copyText(JSON.stringify(store),'Backup copied');break;
+   case 'backupSave':saveText('boq-planner-backup.json',JSON.stringify(store,null,1),'application/json');break;
+   case 'restore':{try{const s=JSON.parse($('#restorebox').value);if(!s.projects||!s.projects.length)throw 0;store=s;saveStore();ui.view='app';toast('Backup restored');render()}catch(err){toast('That is not a valid backup')}break}
+  }
+});
+
+initStore();
+render();
+</script>
+
+</body>
+</html>

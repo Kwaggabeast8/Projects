@@ -8,6 +8,18 @@ Internal construction project-control app for **MF Building Civils & Development
   and as a **native iOS/Android app** (Expo Go or a build).
 * `e2e/` – Playwright browser test that drives the real UI as Admin and as Viewer.
 
+## Quick try on your own computer
+
+```bash
+git clone -b claude/mf-project-control-finish-nzx4rw https://github.com/Kwaggabeast8/Projects.git
+cd Projects/MFProjectControl
+./run-local.sh                 # first run installs + builds (a few minutes), then opens on http://localhost:4000
+# sign in: admin@mfbuilding.co.za / ChangeMe-123
+```
+Optional, in a second terminal: `cd server && node scripts/seed-sample.js` adds a clearly-named sample project and three test logins
+(`foreman@`, `client@`, `manager@sample.test`, password `Sample-1234`) so you can try each access level. Skip it for a clean start.
+To test from your phone on the same Wi-Fi, open `http://<your-computer's-IP>:4000` in the phone's browser.
+
 ## Run it
 
 Requires Node 22.5+.

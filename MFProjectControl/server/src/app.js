@@ -8,6 +8,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { db, tx, all, get, run, DATA_DIR } = require('./db');
 const calc = require('./calc');
+const perms = require('./perms');
 const { buildReport } = require('./report');
 
 const UPLOADS = path.join(DATA_DIR, 'uploads');
@@ -162,32 +163,44 @@ function attachFiles(rows, key, projectId) {
   return rows.map((r) => ({ ...r, files: files.filter((f) => f[key] === r.id) }));
 }
 
-function projectSummary(p) {
+function projectSummary(p, pm = perms.ALL) {
   const acts = loadActivities(p.id);
   const s = calc.summarise(p, acts);
-  const open_rfis = get("SELECT COUNT(*) c FROM rfis WHERE project_id=? AND status!='CLOSED'", p.id).c;
-  const open_delays = get("SELECT COUNT(*) c, COALESCE(SUM(days_impact),0) d FROM delays WHERE project_id=? AND status='OPEN'", p.id);
+  const open_rfis = perms.has(pm, 'rfis', 'view') ? get("SELECT COUNT(*) c FROM rfis WHERE project_id=? AND status!='CLOSED'", p.id).c : null;
+  const open_delays = perms.has(pm, 'delays', 'view') ? get("SELECT COUNT(*) c, COALESCE(SUM(days_impact),0) d FROM delays WHERE project_id=? AND status='OPEN'", p.id) : { c: null, d: null };
   return { ...p, ...s, open_rfis, open_delays: open_delays.c, open_delay_days: open_delays.d };
 }
 
-function projectBundle(p, isAdmin) {
-  const acts = loadActivities(p.id);
-  const comments = all('SELECT c.*, u.name user_name FROM comments c JOIN users u ON u.id=c.user_id WHERE c.project_id=? ORDER BY c.id DESC', p.id);
+// Everything one user may see of a project. Sections they have no access to come back empty.
+function projectBundle(p, isAdmin, pm = perms.ALL) {
+  const v = (section) => perms.has(pm, section, 'view');
+  const acts = v('programme') || v('gantt') ? loadActivities(p.id) : [];
+  const FILE_COLS = 'id,project_id,site_update_id,comment_id,uploaded_by,filename,mime,size,caption,created_at';
+  const allFiles = all(`SELECT ${FILE_COLS} FROM project_files WHERE project_id=? ORDER BY id DESC`, p.id);
+  const fileOk = (f) => (f.site_update_id ? v('updates') : f.comment_id ? v('comments') : v('photos'));
+  const files = allFiles.filter(fileOk);
+  const withFiles = (rows, key) => rows.map((r) => ({ ...r, files: files.filter((f) => f[key] === r.id).sort((a, b) => a.id - b.id) }));
+  const comments = v('comments') ? all('SELECT c.*, u.name user_name FROM comments c JOIN users u ON u.id=c.user_id WHERE c.project_id=? ORDER BY c.id DESC', p.id) : [];
   const bundle = {
     project: p,
-    summary: calc.summarise(p, acts),
+    permissions: pm,
+    summary: calc.summarise(p, loadActivities(p.id)),
     activities: acts,
-    rfis: all('SELECT * FROM rfis WHERE project_id=? ORDER BY id DESC', p.id),
-    variations: all('SELECT * FROM variations WHERE project_id=? ORDER BY id DESC', p.id),
-    delays: all('SELECT * FROM delays WHERE project_id=? ORDER BY date_recorded DESC, id DESC', p.id),
-    site_updates: attachFiles(all('SELECT s.*, u.name created_by_name FROM site_updates s LEFT JOIN users u ON u.id=s.created_by WHERE s.project_id=? ORDER BY s.update_date DESC, s.id DESC', p.id), 'site_update_id', p.id),
-    comments: attachFiles(comments, 'comment_id', p.id),
-    snapshots: all('SELECT id,project_id,snapshot_date,actual,planned,variance,note,detail,created_at FROM progress_snapshots WHERE project_id=? ORDER BY snapshot_date DESC, id DESC', p.id)
-      .map((s) => ({ ...s, detail: JSON.parse(s.detail || '[]') })),
-    photos: all('SELECT id,project_id,site_update_id,comment_id,filename,mime,size,caption,created_at FROM project_files WHERE project_id=? ORDER BY id DESC', p.id),
+    rfis: v('rfis') ? all('SELECT * FROM rfis WHERE project_id=? ORDER BY id DESC', p.id) : [],
+    variations: v('variations') ? all('SELECT * FROM variations WHERE project_id=? ORDER BY id DESC', p.id) : [],
+    delays: v('delays') ? all('SELECT * FROM delays WHERE project_id=? ORDER BY date_recorded DESC, id DESC', p.id) : [],
+    site_updates: v('updates') ? withFiles(all('SELECT s.*, u.name created_by_name FROM site_updates s LEFT JOIN users u ON u.id=s.created_by WHERE s.project_id=? ORDER BY s.update_date DESC, s.id DESC', p.id), 'site_update_id') : [],
+    comments: withFiles(comments, 'comment_id'),
+    snapshots: v('history') ? all('SELECT id,project_id,snapshot_date,actual,planned,variance,note,detail,created_at FROM progress_snapshots WHERE project_id=? ORDER BY snapshot_date DESC, id DESC', p.id)
+      .map((s) => ({ ...s, detail: JSON.parse(s.detail || '[]') })) : [],
+    photos: files,
   };
-  if (isAdmin) bundle.members = all('SELECT u.id,u.name,u.email,u.role FROM project_members m JOIN users u ON u.id=m.user_id WHERE m.project_id=? ORDER BY u.name', p.id);
+  if (isAdmin) bundle.members = memberList(p.id);
   return bundle;
+}
+function memberList(projectId) {
+  return all('SELECT u.id,u.name,u.email,u.role,m.permissions FROM project_members m JOIN users u ON u.id=m.user_id WHERE m.project_id=? ORDER BY u.name', projectId)
+    .map((m) => { const pm = perms.parse(m.permissions); return { id: m.id, name: m.name, email: m.email, role: m.role, permissions: pm, preset: perms.presetOf(pm) }; });
 }
 
 // Shift successors that now start before their predecessor finishes. Never pulls dates earlier.
@@ -304,12 +317,20 @@ function createApp() {
     id = int(id);
     const p = Number.isNaN(id) ? null : get('SELECT * FROM projects WHERE id=?', id);
     if (!p) throw new HttpError(404, 'Project not found');
-    if (req.user.role !== 'ADMIN') {
+    if (req.user.role === 'ADMIN') req.perms = perms.ALL;
+    else {
       if (admin) throw new HttpError(403, 'Administrator access required');
-      if (!get('SELECT 1 x FROM project_members WHERE project_id=? AND user_id=?', id, req.user.id)) throw new HttpError(404, 'Project not found');
+      const m = get('SELECT permissions FROM project_members WHERE project_id=? AND user_id=?', id, req.user.id);
+      if (!m) throw new HttpError(404, 'Project not found');
+      req.perms = perms.parse(m.permissions);
     }
     return p;
   }
+  // Require a level on a section of the project last resolved with projectFor().
+  function need(req, section, level, what) {
+    if (!perms.has(req.perms, section, level)) throw new HttpError(403, `You do not have permission to ${what || (level === 'view' ? 'view this' : 'change this')}`);
+  }
+  const isAdmin = (req) => req.user.role === 'ADMIN';
 
   app.get('/api/health', (req, res) => res.json({ ok: true }));
 
@@ -347,10 +368,14 @@ function createApp() {
     req.on('close', () => { clearInterval(ping); clients.delete(c); });
   });
 
+  // sections / presets for the access editor
+  app.get('/api/access-meta', auth(), (req, res) => res.json({ sections: perms.SECTIONS, presets: Object.fromEntries(Object.keys(perms.PRESETS).map((k) => [k, { label: perms.PRESETS[k].label, permissions: perms.preset(k) }])) }));
+
   // --- users (admin) ---
   const userRow = (u) => ({
     ...publicUser(u), created_at: u.created_at,
     project_ids: all('SELECT project_id FROM project_members WHERE user_id=?', u.id).map((r) => r.project_id),
+    access: all('SELECT project_id, permissions FROM project_members WHERE user_id=?', u.id).map((r) => { const pm = perms.parse(r.permissions); return { project_id: r.project_id, permissions: pm, preset: perms.presetOf(pm) }; }),
   });
   const USER_SPEC = {
     name: { t: 'text', req: true, max: 120, label: 'Name' },
@@ -371,8 +396,10 @@ function createApp() {
     if (pw.length < 8) throw bad('Password must be at least 8 characters');
     const id = tx(() => {
       const uid = insertRow('users', { ...d, password_hash: bcrypt.hashSync(pw, 10) });
-      for (const pid of Array.isArray(req.body.project_ids) ? req.body.project_ids : []) {
-        if (get('SELECT 1 x FROM projects WHERE id=?', pid)) run('INSERT OR IGNORE INTO project_members VALUES(?,?)', pid, uid);
+      const grants = (Array.isArray(req.body.access) ? req.body.access : []).map((a) => ({ pid: a.project_id, pm: perms.fromBody(a) || perms.preset('viewer') }));
+      for (const pid of Array.isArray(req.body.project_ids) ? req.body.project_ids : []) if (!grants.some((g) => g.pid === pid)) grants.push({ pid, pm: perms.preset('viewer') });
+      for (const g of grants) {
+        if (d.role !== 'ADMIN' && get('SELECT 1 x FROM projects WHERE id=?', g.pid)) run('INSERT OR IGNORE INTO project_members(project_id,user_id,permissions) VALUES(?,?,?)', g.pid, uid, JSON.stringify(g.pm));
       }
       audit(req.user, null, 'create', 'User', uid, `Created ${d.role} account ${d.email}`);
       return uid;
@@ -397,9 +424,14 @@ function createApp() {
   app.put('/api/projects/:pid/members/:uid', auth(), needAdmin, h((req, res) => {
     const p = projectFor(req, req.params.pid); const u = get('SELECT * FROM users WHERE id=?', int(req.params.uid));
     if (!u) throw new HttpError(404, 'User not found');
-    run('INSERT OR IGNORE INTO project_members VALUES(?,?)', p.id, u.id);
-    audit(req.user, p.id, 'update', 'Access', u.id, `Granted ${u.name} access`);
-    broadcast(p.id, 'members'); res.json({ ok: true });
+    const given = perms.fromBody(req.body);
+    const existing = get('SELECT permissions FROM project_members WHERE project_id=? AND user_id=?', p.id, u.id);
+    const pm = given || (existing ? perms.parse(existing.permissions) : perms.preset('viewer'));
+    if (existing) run('UPDATE project_members SET permissions=? WHERE project_id=? AND user_id=?', JSON.stringify(pm), p.id, u.id);
+    else run('INSERT INTO project_members(project_id,user_id,permissions) VALUES(?,?,?)', p.id, u.id, JSON.stringify(pm));
+    const label = perms.presetOf(pm);
+    audit(req.user, p.id, 'update', 'Access', u.id, existing ? `Changed ${u.name}'s access to ${label === 'custom' ? 'custom' : perms.PRESETS[label].label}` : `Granted ${u.name} access (${label === 'custom' ? 'custom' : perms.PRESETS[label].label})`);
+    broadcast(p.id, 'members'); res.json({ member: memberList(p.id).find((m) => m.id === u.id) });
   }));
   app.delete('/api/projects/:pid/members/:uid', auth(), needAdmin, h((req, res) => {
     const p = projectFor(req, req.params.pid); const u = get('SELECT * FROM users WHERE id=?', int(req.params.uid));
@@ -413,8 +445,8 @@ function createApp() {
   app.get('/api/projects', auth(), h((req, res) => {
     const rows = req.user.role === 'ADMIN'
       ? all('SELECT * FROM projects ORDER BY (status=\'ACTIVE\') DESC, name')
-      : all('SELECT p.* FROM projects p JOIN project_members m ON m.project_id=p.id WHERE m.user_id=? ORDER BY (p.status=\'ACTIVE\') DESC, p.name', req.user.id);
-    res.json({ projects: rows.map(projectSummary) });
+      : all('SELECT p.*, m.permissions AS _perms FROM projects p JOIN project_members m ON m.project_id=p.id WHERE m.user_id=? ORDER BY (p.status=\'ACTIVE\') DESC, p.name', req.user.id);
+    res.json({ projects: rows.map(({ _perms, ...p }) => ({ ...projectSummary(p, _perms === undefined ? perms.ALL : perms.parse(_perms)), permissions: _perms === undefined ? perms.ALL : perms.parse(_perms) })) });
   }));
   app.post('/api/projects', auth(), needAdmin, h((req, res) => {
     const d = clean(PROJECT_SPEC, req.body);
@@ -429,7 +461,7 @@ function createApp() {
   }));
   app.get('/api/projects/:id', auth(), h((req, res) => {
     const p = projectFor(req, req.params.id);
-    res.json(projectBundle(p, req.user.role === 'ADMIN'));
+    res.json(projectBundle(p, isAdmin(req), req.perms));
   }));
   app.patch('/api/projects/:id', auth(), needAdmin, h((req, res) => {
     const p = projectFor(req, req.params.id);
@@ -472,8 +504,8 @@ function createApp() {
     if (body.is_milestone !== undefined || !existing) d.is_milestone = ms ? 1 : 0;
     return d;
   }
-  app.post('/api/projects/:id/activities', auth(), needAdmin, h((req, res) => {
-    const p = projectFor(req, req.params.id);
+  app.post('/api/projects/:id/activities', auth(), h((req, res) => {
+    const p = projectFor(req, req.params.id); need(req, 'programme', 'edit', 'add activities');
     const d = actFromBody(req.body);
     const id = tx(() => {
       d.project_id = p.id;
@@ -487,10 +519,15 @@ function createApp() {
     broadcast(p.id, 'programme');
     res.status(201).json({ activity: loadActivities(p.id).find((a) => a.id === id) });
   }));
-  app.patch('/api/activities/:id', auth(), needAdmin, h((req, res) => {
+  app.patch('/api/activities/:id', auth(), h((req, res) => {
     const a = get('SELECT * FROM activities WHERE id=?', int(req.params.id));
     if (!a) throw new HttpError(404, 'Activity not found');
     const p = projectFor(req, a.project_id);
+    if (!perms.has(req.perms, 'programme', 'edit')) {
+      // "progress" level: may only report % complete
+      need(req, 'programme', 'progress', 'update progress');
+      if (Object.keys(req.body).some((k) => k !== 'actual_progress')) throw new HttpError(403, 'You can only update progress %, not dates or details');
+    }
     const d = actFromBody(req.body, a);
     let moved = [];
     tx(() => {
@@ -508,15 +545,15 @@ function createApp() {
     broadcast(p.id, 'programme');
     res.json({ activity: loadActivities(p.id).find((x) => x.id === a.id), shifted_activity_ids: [...new Set(moved)] });
   }));
-  app.delete('/api/activities/:id', auth(), needAdmin, h((req, res) => {
+  app.delete('/api/activities/:id', auth(), h((req, res) => {
     const a = get('SELECT * FROM activities WHERE id=?', int(req.params.id));
     if (!a) throw new HttpError(404, 'Activity not found');
-    const p = projectFor(req, a.project_id);
+    const p = projectFor(req, a.project_id); need(req, 'programme', 'edit', 'delete activities');
     tx(() => { run('DELETE FROM activities WHERE id=?', a.id); audit(req.user, p.id, 'delete', 'Activity', a.id, `Deleted activity ${a.name}`); });
     broadcast(p.id, 'programme'); res.json({ ok: true });
   }));
-  app.post('/api/projects/:id/activities/reorder', auth(), needAdmin, h((req, res) => {
-    const p = projectFor(req, req.params.id);
+  app.post('/api/projects/:id/activities/reorder', auth(), h((req, res) => {
+    const p = projectFor(req, req.params.id); need(req, 'programme', 'edit', 'reorder activities');
     const ids = (req.body.ids || []).map(Number);
     const have = all('SELECT id FROM activities WHERE project_id=?', p.id).map((r) => r.id);
     if (ids.length !== have.length || !have.every((i) => ids.includes(i))) throw bad('ids must list every activity of the project exactly once');
@@ -526,8 +563,10 @@ function createApp() {
 
   // --- RFIs / variations / delays / site updates ---
   for (const [route, cfg] of Object.entries(SPECS)) {
-    app.post(`/api/projects/:id/${route}`, auth(), needAdmin, h((req, res) => {
-      const p = projectFor(req, req.params.id);
+    const section = route === 'site-updates' ? 'updates' : route;
+    const own = (req, row) => { if (route === 'site-updates' && !isAdmin(req) && row.created_by !== req.user.id) throw new HttpError(403, 'You can only change your own site updates'); };
+    app.post(`/api/projects/:id/${route}`, auth(), h((req, res) => {
+      const p = projectFor(req, req.params.id); need(req, section, 'edit', `add to ${cfg.audit.toLowerCase()}s`);
       const d = clean(cfg.spec, req.body);
       if (cfg.prefix && !d.reference) {
         const n = all(`SELECT reference FROM ${cfg.table} WHERE project_id=?`, p.id).reduce((m, r) => Math.max(m, parseInt((r.reference.match(/(\d+)$/) || [0, 0])[1], 10) || 0), 0);
@@ -540,10 +579,10 @@ function createApp() {
       broadcast(p.id, route);
       res.status(201).json({ item: get(`SELECT * FROM ${cfg.table} WHERE id=?`, id) });
     }));
-    app.patch(`/api/${route}/:id`, auth(), needAdmin, h((req, res) => {
+    app.patch(`/api/${route}/:id`, auth(), h((req, res) => {
       const row = get(`SELECT * FROM ${cfg.table} WHERE id=?`, int(req.params.id));
       if (!row) throw new HttpError(404, 'Not found');
-      const p = projectFor(req, row.project_id);
+      const p = projectFor(req, row.project_id); need(req, section, 'edit'); own(req, row);
       const d = clean(cfg.spec, req.body, true);
       if (route === 'rfis' && d.status) {
         if (d.status === 'CLOSED' && !(d.date_closed || row.date_closed)) d.date_closed = calc.today();
@@ -555,10 +594,10 @@ function createApp() {
       broadcast(p.id, route);
       res.json({ item: get(`SELECT * FROM ${cfg.table} WHERE id=?`, row.id) });
     }));
-    app.delete(`/api/${route}/:id`, auth(), needAdmin, h((req, res) => {
+    app.delete(`/api/${route}/:id`, auth(), h((req, res) => {
       const row = get(`SELECT * FROM ${cfg.table} WHERE id=?`, int(req.params.id));
       if (!row) throw new HttpError(404, 'Not found');
-      const p = projectFor(req, row.project_id);
+      const p = projectFor(req, row.project_id); need(req, section, 'edit'); own(req, row);
       const files = route === 'site-updates' ? all('SELECT stored_name FROM project_files WHERE site_update_id=?', row.id) : [];
       tx(() => { run(`DELETE FROM ${cfg.table} WHERE id=?`, row.id); audit(req.user, p.id, 'delete', cfg.audit, row.id, cfg.label(row)); });
       files.forEach((f) => removeFileFromDisk(f.stored_name));
@@ -568,7 +607,7 @@ function createApp() {
 
   // --- comments (any project member; delete = admin) ---
   app.post('/api/projects/:id/comments', auth(), h((req, res) => {
-    const p = projectFor(req, req.params.id);
+    const p = projectFor(req, req.params.id); need(req, 'comments', 'edit', 'post comments');
     const body = String(req.body.body || '').trim();
     if (!body) throw bad('Comment cannot be empty');
     if (body.length > 5000) throw bad('Comment is too long');
@@ -589,6 +628,7 @@ function createApp() {
   // --- files / photos ---
   app.post('/api/projects/:id/files', auth(), (req, res, next) => {
     try { projectFor(req, req.params.id); } catch (e) { return next(e); }
+    if (!['updates', 'photos', 'comments'].some((k) => perms.has(req.perms, k, 'edit'))) return next(new HttpError(403, 'You do not have permission to upload photos'));
     upload.array('photos', 10)(req, res, (err) => {
       if (err) return next(err.code === 'LIMIT_FILE_SIZE' ? bad('Photo is too large (15 MB max)') : err);
       try {
@@ -598,12 +638,19 @@ function createApp() {
         if (!files.length) throw bad('No photo received');
         const suId = req.body.site_update_id ? int(req.body.site_update_id) : null;
         const cId = req.body.comment_id ? int(req.body.comment_id) : null;
-        if (suId !== null && (Number.isNaN(suId) || !get('SELECT 1 x FROM site_updates WHERE id=? AND project_id=?', suId, p.id))) { cleanup(); throw bad('Site update not found'); }
-        if (cId !== null) {
-          const c = Number.isNaN(cId) ? null : get('SELECT * FROM comments WHERE id=? AND project_id=?', cId, p.id);
-          if (!c) { cleanup(); throw bad('Comment not found'); }
-          if (req.user.role !== 'ADMIN' && c.user_id !== req.user.id) { cleanup(); throw new HttpError(403, 'You can only attach photos to your own comments'); }
-        } else if (req.user.role !== 'ADMIN') { cleanup(); throw new HttpError(403, 'Viewers can only attach photos to their own comments'); }
+        try {
+          if (suId !== null) {
+            const su = Number.isNaN(suId) ? null : get('SELECT * FROM site_updates WHERE id=? AND project_id=?', suId, p.id);
+            if (!su) throw bad('Site update not found');
+            need(req, 'updates', 'edit', 'add photos to site updates');
+            if (!isAdmin(req) && su.created_by !== req.user.id) throw new HttpError(403, 'You can only add photos to your own site updates');
+          } else if (cId !== null) {
+            const c = Number.isNaN(cId) ? null : get('SELECT * FROM comments WHERE id=? AND project_id=?', cId, p.id);
+            if (!c) throw bad('Comment not found');
+            need(req, 'comments', 'edit', 'add photos to comments');
+            if (!isAdmin(req) && c.user_id !== req.user.id) throw new HttpError(403, 'You can only attach photos to your own comments');
+          } else need(req, 'photos', 'edit', 'upload project photos');
+        } catch (e) { cleanup(); throw e; }
         let captions = req.body.captions; if (captions !== undefined && !Array.isArray(captions)) captions = [captions];
         const out = tx(() => files.map((f, i) => {
           const id = insertRow('project_files', {
@@ -622,29 +669,34 @@ function createApp() {
   app.get('/api/files/:id', auth(true), h((req, res) => {
     const f = get('SELECT * FROM project_files WHERE id=?', int(req.params.id));
     if (!f) throw new HttpError(404, 'File not found');
-    projectFor(req, f.project_id);
+    projectFor(req, f.project_id); need(req, fileSection(f), 'view', 'view this photo');
     res.set('Cache-Control', 'private, max-age=3600'); res.type(f.mime);
     res.sendFile(path.join(UPLOADS, f.stored_name), (e) => { if (e && !res.headersSent) res.status(404).json({ error: 'File missing from storage' }); });
   }));
-  app.patch('/api/files/:id', auth(), needAdmin, h((req, res) => {
+  const fileSection = (f) => (f.site_update_id ? 'updates' : f.comment_id ? 'comments' : 'photos');
+  // admins manage any photo; others only photos they uploaded themselves, and only with edit access to that section
+  const manageFile = (req, f) => { projectFor(req, f.project_id); need(req, fileSection(f), 'edit', 'change this photo'); if (!isAdmin(req) && f.uploaded_by !== req.user.id) throw new HttpError(403, 'You can only change photos you uploaded'); };
+  app.patch('/api/files/:id', auth(), h((req, res) => {
     const f = get('SELECT * FROM project_files WHERE id=?', int(req.params.id));
     if (!f) throw new HttpError(404, 'File not found');
+    manageFile(req, f);
     const caption = String(req.body.caption ?? '').slice(0, 500);
     run('UPDATE project_files SET caption=? WHERE id=?', caption, f.id);
     audit(req.user, f.project_id, 'update', 'Photo', f.id, `Caption: ${caption}`);
     broadcast(f.project_id, 'files'); res.json({ ok: true });
   }));
-  app.delete('/api/files/:id', auth(), needAdmin, h((req, res) => {
+  app.delete('/api/files/:id', auth(), h((req, res) => {
     const f = get('SELECT * FROM project_files WHERE id=?', int(req.params.id));
     if (!f) throw new HttpError(404, 'File not found');
+    manageFile(req, f);
     run('DELETE FROM project_files WHERE id=?', f.id); removeFileFromDisk(f.stored_name);
     audit(req.user, f.project_id, 'delete', 'Photo', f.id, f.filename);
     broadcast(f.project_id, 'files'); res.json({ ok: true });
   }));
 
   // --- snapshots / history ---
-  app.post('/api/projects/:id/snapshots', auth(), needAdmin, h((req, res) => {
-    const p = projectFor(req, req.params.id);
+  app.post('/api/projects/:id/snapshots', auth(), h((req, res) => {
+    const p = projectFor(req, req.params.id); need(req, 'history', 'edit', 'take snapshots');
     const date = req.body.snapshot_date || calc.today();
     if (!calc.isDate(date)) throw bad('Date must be YYYY-MM-DD');
     if (!get('SELECT 1 x FROM activities WHERE project_id=?', p.id)) throw bad('Add programme activities before taking a snapshot');
@@ -653,9 +705,10 @@ function createApp() {
     broadcast(p.id, 'snapshots');
     res.status(201).json({ snapshot: get('SELECT * FROM progress_snapshots WHERE id=?', id) });
   }));
-  app.patch('/api/snapshots/:id', auth(), needAdmin, h((req, res) => {
+  app.patch('/api/snapshots/:id', auth(), h((req, res) => {
     const s = get('SELECT * FROM progress_snapshots WHERE id=?', int(req.params.id));
     if (!s) throw new HttpError(404, 'Snapshot not found');
+    projectFor(req, s.project_id); need(req, 'history', 'edit');
     run('UPDATE progress_snapshots SET note=? WHERE id=?', String(req.body.note ?? '').slice(0, 2000), s.id);
     audit(req.user, s.project_id, 'update', 'Snapshot', s.id, 'Edited note'); broadcast(s.project_id, 'snapshots'); res.json({ ok: true });
   }));

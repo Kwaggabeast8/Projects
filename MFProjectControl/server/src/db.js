@@ -123,6 +123,11 @@ CREATE INDEX IF NOT EXISTS idx_audit_proj ON audit_events(project_id, id);
 CREATE INDEX IF NOT EXISTS idx_files_proj ON project_files(project_id);
 `);
 
+// Migration: per-project permissions on memberships (existing members become Viewer / Commenter).
+if (!db.prepare('PRAGMA table_info(project_members)').all().some((c) => c.name === 'permissions')) {
+  db.exec('ALTER TABLE project_members ADD COLUMN permissions TEXT');
+}
+
 // Run fn inside a transaction.
 function tx(fn) {
   db.exec('BEGIN');

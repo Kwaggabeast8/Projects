@@ -46,7 +46,7 @@ export function PhotoPicker({ value, onChange, multiple = true }) {
 }
 
 // Thumbnails of stored photos; tap for a large view (admin can edit caption / delete).
-export function PhotoGrid({ files, admin, onChanged }) {
+export function PhotoGrid({ files, canManage, onChanged }) {
   const [open, setOpen] = useState(null);
   const [caption, setCaption] = useState('');
   const { toast, confirm } = useUI();
@@ -65,7 +65,7 @@ export function PhotoGrid({ files, admin, onChanged }) {
       <Modal visible={!!f} transparent animationType="fade" onRequestClose={() => setOpen(null)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', padding: 12 }}>
           {f && <Image source={{ uri: fileUrl(f.id) }} resizeMode="contain" style={{ width: '100%', height: '65%' }} />}
-          {f && admin ? (
+          {f && canManage && canManage(f) ? (
             <View style={{ marginTop: 12, gap: 8 }}>
               <TextInput value={caption} onChangeText={setCaption} placeholder="Caption" placeholderTextColor="#999" style={[st.input, { backgroundColor: '#fff' }]} />
               <View style={st.row}>

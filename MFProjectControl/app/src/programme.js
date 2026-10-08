@@ -50,9 +50,15 @@ function ActivityForm({ visible, onClose, activity, acts, projectId, onSaved }) 
   );
 }
 
-export function ProgrammeTab({ data, admin, reload, projectId }) {
+export function ProgrammeTab({ data, pm, reload, projectId }) {
   const { toast } = useUI();
-  const [mode, setMode] = useState('table');
+  const has = (k, ...lv) => lv.includes(pm[k]);
+  const canFull = has('programme', 'edit');          // dates, structure, add/delete, reorder
+  const canProgress = has('programme', 'progress', 'edit'); // update % complete
+  const showList = has('programme', 'view', 'progress', 'edit');
+  const showGantt = has('gantt', 'view');
+  const admin = canFull;
+  const [mode, setMode] = useState(showList ? 'table' : 'gantt');
   const [editing, setEditing] = useState(null); // null | 'new' | activity
   const acts = data.activities;
   const done = () => { setEditing(null); reload(); };
@@ -67,12 +73,12 @@ export function ProgrammeTab({ data, admin, reload, projectId }) {
     <View>
       <SummaryStats summary={data.summary} />
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 8, flexWrap: 'wrap' }}>
-        <Chips options={[{ value: 'table', label: 'Activity list' }, { value: 'gantt', label: 'Gantt chart' }]} value={mode} onChange={setMode} />
+        {showList && showGantt ? <Chips options={[{ value: 'table', label: 'Activity list' }, { value: 'gantt', label: 'Gantt chart' }]} value={mode} onChange={setMode} /> : <View />}
         {admin && <Btn label="+ Add activity" small onPress={() => setEditing('new')} />}
       </View>
       {!acts.length && <Card><Empty text={admin ? 'No activities yet. Tap "+ Add activity" to start building the programme.' : 'No programme has been captured for this project yet.'} /></Card>}
-      {!!acts.length && mode === 'gantt' && <Gantt data={data} onEdit={admin ? (a) => setEditing(a) : null} />}
-      {!!acts.length && mode === 'table' && acts.map((a, i) => (
+      {!!acts.length && showGantt && (mode === 'gantt' || !showList) && <Gantt data={data} onEdit={admin ? (a) => setEditing(a) : null} />}
+      {!!acts.length && showList && (mode === 'table' || !showGantt) && acts.map((a, i) => (
         <Card key={a.id}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
             <Text style={{ fontWeight: '800', color: C.navy, fontSize: 15, flex: 1 }}>{i + 1}. {a.is_milestone ? '◆ ' : ''}{a.name}</Text>
@@ -92,11 +98,11 @@ export function ProgrammeTab({ data, admin, reload, projectId }) {
             <View style={s.line}><Text style={s.lbl}>Planned</Text><View style={{ flex: 1 }}><Bar value={a.planned_progress} color={C.grey} /></View><Text style={s.val}>{Math.round(a.planned_progress)}%</Text></View>
           </View>
           {!!a.notes && <Muted style={{ marginTop: 6 }}>{a.notes}</Muted>}
-          {admin && (
+          {canProgress && (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10, alignItems: 'center' }}>
               {[0, 25, 50, 75, 100].map((v) => <Pressable key={v} onPress={() => setProgress(a, v)} style={[s.q, Math.round(a.actual_progress) === v && { backgroundColor: C.navy }]}><Text style={{ fontSize: 12, fontWeight: '700', color: Math.round(a.actual_progress) === v ? '#fff' : C.ink }}>{v}%</Text></Pressable>)}
               <View style={{ flex: 1 }} />
-              <Btn label="Edit" kind="dark" small onPress={() => setEditing(a)} />
+              {canFull && <Btn label="Edit" kind="dark" small onPress={() => setEditing(a)} />}
             </View>
           )}
         </Card>

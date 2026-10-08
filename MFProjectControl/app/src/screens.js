@@ -7,6 +7,7 @@ import { SummaryStats, ProgrammeTab } from './programme';
 import { RfiTab, VariationTab, DelayTab, SiteUpdatesTab, CommentsTab } from './registers';
 import { PhotoPicker, PhotoGrid } from './photos';
 import { uploadPhotos } from './api';
+import { AccessEditor, accessMeta, presetLabel } from './access';
 
 const LOGO = (size = 34) => (
   <View style={{ width: size, height: size, borderRadius: 4, backgroundColor: C.orange, alignItems: 'center', justifyContent: 'center' }}>
@@ -26,7 +27,7 @@ export function Header({ user, title, onBack, onHome, onUsers, onAccount }) {
           {wide && <Text style={{ color: '#9FB0C6', fontSize: 11.5 }}>MF Building Civils & Development</Text>}
         </View>
         {user && user.role === 'ADMIN' && onUsers && <Btn label="Users" kind="light" small onPress={onUsers} />}
-        {user && <Pressable onPress={onAccount} style={{ alignItems: 'flex-end' }}><Text style={{ color: '#fff', fontSize: 12.5, fontWeight: '700' }}>{user.name}</Text><Text style={{ color: '#9FB0C6', fontSize: 11 }}>{user.role === 'ADMIN' ? 'Admin' : 'Viewer'} · account</Text></Pressable>}
+        {user && <Pressable onPress={onAccount} style={{ alignItems: 'flex-end' }}><Text style={{ color: '#fff', fontSize: 12.5, fontWeight: '700' }}>{user.name}</Text><Text style={{ color: '#9FB0C6', fontSize: 11 }}>{user.role === 'ADMIN' ? 'Admin' : 'Team member'} · account</Text></Pressable>}
       </View>
     </View>
   );
@@ -112,8 +113,8 @@ export function Projects({ user, onOpen, rt }) {
               <Muted>Variance: <Text style={{ fontWeight: '800', color: varColor(p.variance) }}>{sgn(p.variance)}</Text></Muted>
               <Muted>Baseline: <Text style={{ fontWeight: '700', color: C.ink }}>{fmtDate(p.baseline_finish)}</Text></Muted>
               <Muted>Forecast: <Text style={{ fontWeight: '700', color: C.ink }}>{fmtDate(p.forecast_finish)}</Text></Muted>
-              <Muted>Open RFIs: <Text style={{ fontWeight: '700', color: C.ink }}>{p.open_rfis}</Text></Muted>
-              <Muted>Delays: <Text style={{ fontWeight: '700', color: p.open_delays ? C.red : C.ink }}>{p.open_delays} open{p.open_delay_days ? ` (${p.open_delay_days}d)` : ''}</Text></Muted>
+              {p.open_rfis != null && <Muted>Open RFIs: <Text style={{ fontWeight: '700', color: C.ink }}>{p.open_rfis}</Text></Muted>}
+              {p.open_delays != null && <Muted>Delays: <Text style={{ fontWeight: '700', color: p.open_delays ? C.red : C.ink }}>{p.open_delays} open{p.open_delay_days ? ` (${p.open_delay_days}d)` : ''}</Text></Muted>}
             </View>
           </Card>
         </Pressable>
@@ -154,29 +155,36 @@ export function ProjectScreen({ user, projectId, tab, setTab, rt, onBack }) {
   if (state.loading) return <Loading />;
   if (state.error) return <View><ErrorBox message={state.error} onRetry={load} /><Btn label="Back to projects" kind="ghost" onPress={onBack} /></View>;
   const data = state.data; const p = data.project;
-  const tabs = TABS.filter(([k]) => admin || k !== 'manage');
-  const props = { data, admin, reload: load, projectId };
+  const pm = data.permissions;
+  const v = (k) => pm[k] !== 'none';
+  const visibleTab = { overview: true, programme: v('programme') || v('gantt'), updates: v('updates'), rfis: v('rfis'), variations: v('variations'), delays: v('delays'), comments: v('comments'), history: v('history'), manage: admin };
+  const tabs = TABS.filter(([k]) => visibleTab[k]);
+  const props = { data, admin, user, pm, reload: load, projectId };
+  const cur = visibleTab[tab] ? tab : 'overview';
   return (
     <View>
       <View style={{ marginBottom: 8 }}>
         <Text style={{ fontSize: 21, fontWeight: '900', color: C.navy }}>{p.name}</Text>
         <Muted>{[p.client, p.site].filter(Boolean).join('  ·  ')}</Muted>
       </View>
-      <View style={{ marginBottom: 12 }}><Chips scroll value={tab} onChange={setTab} options={tabs.map(([value, label]) => ({ value, label }))} /></View>
-      {tab === 'overview' && <Overview {...props} />}
-      {tab === 'programme' && <ProgrammeTab {...props} />}
-      {tab === 'updates' && <SiteUpdatesTab {...props} />}
-      {tab === 'rfis' && <RfiTab {...props} />}
-      {tab === 'variations' && <VariationTab {...props} />}
-      {tab === 'delays' && <DelayTab {...props} />}
-      {tab === 'comments' && <CommentsTab {...props} />}
-      {tab === 'history' && <History {...props} />}
-      {tab === 'manage' && admin && <Manage {...props} onDeleted={onBack} />}
+      <View style={{ marginBottom: 12 }}><Chips scroll value={cur} onChange={setTab} options={tabs.map(([value, label]) => ({ value, label }))} /></View>
+      {cur === 'overview' && <Overview {...props} />}
+      {cur === 'programme' && <ProgrammeTab {...props} />}
+      {cur === 'updates' && <SiteUpdatesTab {...props} />}
+      {cur === 'rfis' && <RfiTab {...props} admin={pm.rfis === 'edit'} />}
+      {cur === 'variations' && <VariationTab {...props} admin={pm.variations === 'edit'} />}
+      {cur === 'delays' && <DelayTab {...props} admin={pm.delays === 'edit'} />}
+      {cur === 'comments' && <CommentsTab {...props} />}
+      {cur === 'history' && <History {...props} />}
+      {cur === 'manage' && admin && <Manage {...props} onDeleted={onBack} />}
     </View>
   );
 }
 
-function Overview({ data, admin, reload, projectId }) {
+function Overview({ data, user, pm, reload, projectId }) {
+  const isAdmin = user.role === 'ADMIN';
+  const canPhotos = pm.photos === 'edit';
+  const canManage = (f) => isAdmin || (canPhotos && f.uploaded_by === user.id);
   const p = data.project, s = data.summary;
   const { toast } = useUI();
   const [photos, setPhotos] = useState([]);
@@ -190,15 +198,15 @@ function Overview({ data, admin, reload, projectId }) {
         {row('Client', p.client)}{row('Site', p.site)}{row('Project manager', p.project_manager)}{row('Status', cap(p.status))}
         {row('Baseline start', fmtDate(p.baseline_start))}{row('Baseline finish', fmtDate(p.baseline_finish))}{row('Forecast finish', fmtDate(s.forecast_finish))}{row('Programme finish', fmtDate(s.programme_finish))}
       </Card>
-      <Card>
+      {pm.updates !== 'none' && <Card>
         <H style={{ fontSize: 15 }}>Latest site update</H>
         {data.site_updates.length ? (() => { const u = data.site_updates[0]; return <View><Text style={{ fontWeight: '700' }}>{fmtDate(u.update_date)}</Text><Muted>{u.current_work || u.progress_notes || u.work_completed || 'No details'}</Muted></View>; })() : <Muted>No site updates yet.</Muted>}
-      </Card>
-      <Card>
+      </Card>}
+      {pm.photos !== 'none' && <Card>
         <H style={{ fontSize: 15 }}>Photos ({gallery.filter((f) => !f.comment_id).length})</H>
-        <PhotoGrid files={gallery.filter((f) => !f.comment_id)} admin={admin} onChanged={reload} />
+        <PhotoGrid files={gallery.filter((f) => !f.comment_id)} canManage={canManage} onChanged={reload} />
         {!gallery.filter((f) => !f.comment_id).length && <Muted>No photos uploaded yet.</Muted>}
-        {admin && (
+        {canPhotos && (
           <View style={{ marginTop: 12 }}>
             <PhotoPicker value={photos} onChange={setPhotos} />
             {!!photos.length && <View style={{ marginTop: 10 }}><Btn label={`Upload ${photos.length} photo${photos.length === 1 ? '' : 's'}`} busy={busy} onPress={async () => {
@@ -208,12 +216,13 @@ function Overview({ data, admin, reload, projectId }) {
             }} /></View>}
           </View>
         )}
-      </Card>
+      </Card>}
     </View>
   );
 }
 
-function History({ data, admin, reload, projectId }) {
+function History({ data, admin, pm, reload, projectId }) {
+  const canSnap = pm.history === 'edit';
   const { toast, confirm } = useUI();
   const [note, setNote] = useState('');
   const [open, setOpen] = useState(null);
@@ -229,7 +238,7 @@ function History({ data, admin, reload, projectId }) {
   return (
     <View>
       <H>Progress history</H>
-      {admin && (
+      {canSnap && (
         <Card>
           <Text style={st.label}>Take a progress snapshot (records actual, planned and variance as at today)</Text>
           <TextInput value={note} onChangeText={setNote} placeholder="Note (optional), e.g. Week 12 - slab poured" style={st.input} />
@@ -277,6 +286,9 @@ function Manage({ data, reload, projectId, onDeleted }) {
   const [from, setFrom] = useState(addDays(todayStr(), -6));
   const [to, setTo] = useState(todayStr());
   const [inc, setInc] = useState(['rfis', 'variations', 'delays', 'photos', 'history']);
+  const [meta, setMeta] = useState(null);
+  const [editMember, setEditMember] = useState(null);
+  useEffect(() => { accessMeta().then(setMeta).catch(() => {}); }, []);
   useEffect(() => { api('GET', '/users').then((r) => setUsers(r.users)).catch(() => {}); }, [data]);
   const members = data.members || [];
   const addable = users.filter((u) => u.active && !members.find((m) => m.id === u.id));
@@ -314,17 +326,20 @@ function Manage({ data, reload, projectId, onDeleted }) {
         </View>
       </Card>
       <Card>
-        <H style={{ fontSize: 16 }}>Who can see this project</H>
-        <Muted style={{ marginBottom: 8 }}>Admins see every project. Viewers only see projects they are assigned to.</Muted>
-        {!members.length && <Muted>No viewers assigned.</Muted>}
+        <H style={{ fontSize: 16 }}>Who has access, and to what</H>
+        <Muted style={{ marginBottom: 8 }}>Admins see and do everything on every project. Everyone else only sees projects they are assigned to, and only the parts you switch on for them.</Muted>
+        {!members.length && <Muted>No one assigned yet.</Muted>}
         {members.map((m) => (
           <View key={m.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }}>
-            <View style={{ flex: 1 }}><Text style={{ fontWeight: '700' }}>{m.name}</Text><Muted style={{ fontSize: 12 }}>{m.email}  ·  {m.role === 'ADMIN' ? 'Admin' : 'Viewer'}</Muted></View>
+            <View style={{ flex: 1 }}><Text style={{ fontWeight: '700' }}>{m.name}</Text><Muted style={{ fontSize: 12 }}>{m.email}</Muted><View style={{ marginTop: 3 }}><Pill text={presetLabel(m.preset, meta)} color={m.preset === 'foreman' ? C.orange : m.preset === 'custom' ? C.amber : C.blue} /></View></View>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+            <Btn label="Access" kind="dark" small onPress={() => setEditMember(m)} />
             <Btn label="Remove" kind="ghost" small onPress={async () => { try { await api('DELETE', `/projects/${projectId}/members/${m.id}`); toast('Access removed'); reload(); } catch (e) { toast(e.message, 'err'); } }} />
+            </View>
           </View>
         ))}
-        {!!addable.length && <><Text style={[st.label, { marginTop: 10 }]}>Give access to</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{addable.map((u) => <Pressable key={u.id} style={st.chip} onPress={async () => { try { await api('PUT', `/projects/${projectId}/members/${u.id}`); toast(`${u.name} can now view this project`); reload(); } catch (e) { toast(e.message, 'err'); } }}><Text style={{ fontWeight: '600', fontSize: 13 }}>+ {u.name}</Text></Pressable>)}</View></>}
+        {!!addable.length && <><Text style={[st.label, { marginTop: 10 }]}>Add someone to this project</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{addable.map((u) => <Pressable key={u.id} style={st.chip} onPress={async () => { try { const r = await api('PUT', `/projects/${projectId}/members/${u.id}`, { preset: 'viewer' }); toast(`${u.name} added - choose what they can access`); reload(); setEditMember(r.member); } catch (e) { toast(e.message, 'err'); } }}><Text style={{ fontWeight: '600', fontSize: 13 }}>+ {u.name}</Text></Pressable>)}</View></>}
       </Card>
       <Card>
         <H style={{ fontSize: 16 }}>Backup / export</H>
@@ -344,6 +359,7 @@ function Manage({ data, reload, projectId, onDeleted }) {
         }} />
       </Card>
       <ProjectForm visible={editing} project={p} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); toast('Project saved'); reload(); }} />
+      <AccessEditor visible={!!editMember} projectId={projectId} projectName={p.name} member={editMember} onClose={() => setEditMember(null)} onSaved={() => { setEditMember(null); reload(); }} />
     </View>
   );
 }
@@ -355,6 +371,9 @@ export function Users({ me }) {
   const [projects, setProjects] = useState([]);
   const [form, setForm] = useState(null); // 'new' | user
   const [secret, setSecret] = useState(null);
+  const [meta, setMeta] = useState(null);
+  const [access, setAccess] = useState(null); // {user, project_id}
+  useEffect(() => { accessMeta().then(setMeta).catch(() => {}); }, []);
   const load = useCallback(async () => {
     try { const [u, p] = await Promise.all([api('GET', '/users'), api('GET', '/projects')]); setState({ users: u.users }); setProjects(p.projects); } catch (e) { setState({ error: e.message }); }
   }, []);
@@ -363,9 +382,11 @@ export function Users({ me }) {
   if (state.error) return <ErrorBox message={state.error} onRetry={load} />;
   const fields = [
     { key: 'name', label: 'Full name', required: true }, { key: 'email', label: 'Email (used to sign in)', required: true, autoCapitalize: 'none', keyboard: 'email-address' },
-    { key: 'role', label: 'Role', type: 'select', options: [{ value: 'VIEWER', label: 'Viewer / Commenter' }, { value: 'ADMIN', label: 'Admin' }] },
+    { key: 'role', label: 'Role', type: 'select', options: [{ value: 'VIEWER', label: 'Team member (access set per project)' }, { value: 'ADMIN', label: 'Admin (full access)' }] },
     { key: 'password', label: form && form !== 'new' ? 'New password (leave blank to keep)' : 'Password (leave blank to generate one)', secure: true, autoCapitalize: 'none' },
-    { key: 'project_ids', label: 'Project access', type: 'multi', empty: 'No projects yet', options: projects.map((p) => ({ value: p.id, label: p.name })), hidden: (v) => v.role === 'ADMIN', hint: 'Admins automatically see all projects.' },
+    { key: 'preset', label: 'Access level on newly added projects', type: 'select', hidden: (v) => v.role === 'ADMIN', hint: 'You can fine-tune each project afterwards (tap the project under the user).',
+      options: meta ? Object.entries(meta.presets).map(([value, p]) => ({ value, label: p.label })) : [{ value: 'viewer', label: 'Viewer / Commenter' }] },
+    { key: 'project_ids', label: 'Projects this person can open', type: 'multi', empty: 'No projects yet', options: projects.map((p) => ({ value: p.id, label: p.name })), hidden: (v) => v.role === 'ADMIN', hint: 'Admins automatically see all projects.' },
     ...(form && form !== 'new' ? [{ key: 'active', label: 'Account is active (untick to deactivate)', type: 'toggle' }] : []),
   ];
   return (
@@ -376,9 +397,16 @@ export function Users({ me }) {
         <Card key={u.id} style={!u.active ? { opacity: 0.6 } : null}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
             <View style={{ flex: 1 }}><Text style={{ fontWeight: '800', color: C.navy, fontSize: 15 }}>{u.name}{u.id === me.id ? ' (you)' : ''}</Text><Muted>{u.email}</Muted></View>
-            <View style={{ gap: 4, alignItems: 'flex-end' }}><Pill text={u.role === 'ADMIN' ? 'Admin' : 'Viewer'} color={u.role === 'ADMIN' ? C.orange : C.blue} />{!u.active && <Pill text="Deactivated" color={C.red} />}</View>
+            <View style={{ gap: 4, alignItems: 'flex-end' }}><Pill text={u.role === 'ADMIN' ? 'Admin' : 'Team member'} color={u.role === 'ADMIN' ? C.orange : C.blue} />{!u.active && <Pill text="Deactivated" color={C.red} />}</View>
           </View>
-          {u.role === 'VIEWER' && <Muted style={{ marginTop: 6 }}>Projects: {u.project_ids.length ? u.project_ids.map((id) => (projects.find((p) => p.id === id) || {}).name).filter(Boolean).join(', ') : 'none assigned'}</Muted>}
+          {u.role === 'VIEWER' && (u.access.length ? (
+            <View style={{ marginTop: 8, gap: 6 }}>
+              {u.access.map((a) => { const pr = projects.find((x) => x.id === a.project_id); return pr ? (
+                <Pressable key={a.project_id} onPress={() => setAccess({ user: u, access: a })} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: 8, borderRadius: 8, backgroundColor: C.light }}>
+                  <Text style={{ fontWeight: '600', flex: 1 }}>{pr.name}</Text><Pill text={presetLabel(a.preset, meta)} color={a.preset === 'foreman' ? C.orange : a.preset === 'custom' ? C.amber : C.blue} /><Text style={{ color: C.grey }}>›</Text>
+                </Pressable>) : null; })}
+            </View>
+          ) : <Muted style={{ marginTop: 6 }}>No projects assigned</Muted>)}
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
             <Btn label="Edit" kind="dark" small onPress={() => setForm(u)} />
             <Btn label="Reset password" kind="ghost" small onPress={async () => { if (await confirm(`Reset password for ${u.name}?`, 'A temporary password will be generated.', 'Reset')) { try { const r = await api('PATCH', `/users/${u.id}`, { reset_password: true }); setSecret({ name: u.name, email: u.email, pw: r.temporary_password }); } catch (e) { toast(e.message, 'err'); } } }} />
@@ -386,22 +414,24 @@ export function Users({ me }) {
         </Card>
       ))}
       <FormModal visible={form !== null} title={form === 'new' ? 'Add user' : 'Edit user'} fields={fields} onClose={() => setForm(null)}
-        initial={form && form !== 'new' ? { ...form, password: '', active: !!form.active } : { role: 'VIEWER', project_ids: [] }}
+        initial={form && form !== 'new' ? { ...form, password: '', active: !!form.active, preset: 'viewer' } : { role: 'VIEWER', project_ids: [], preset: 'viewer' }}
         onSubmit={async (v) => {
           if (form === 'new') {
-            const r = await api('POST', '/users', { name: v.name, email: v.email, role: v.role, password: v.password || undefined, project_ids: v.role === 'ADMIN' ? [] : v.project_ids || [] });
+            const r = await api('POST', '/users', { name: v.name, email: v.email, role: v.role, password: v.password || undefined, access: v.role === 'ADMIN' ? [] : (v.project_ids || []).map((project_id) => ({ project_id, preset: v.preset || 'viewer' })) });
             if (r.temporary_password) setSecret({ name: v.name, email: v.email, pw: r.temporary_password });
             toast('User created');
           } else {
             await api('PATCH', `/users/${form.id}`, { name: v.name, email: v.email, role: v.role, active: v.active ? 1 : 0, password: v.password || undefined });
             // sync project access for viewers
             const want = v.role === 'ADMIN' ? [] : v.project_ids || []; const have = form.project_ids || [];
-            for (const id of want.filter((x) => !have.includes(x))) await api('PUT', `/projects/${id}/members/${form.id}`);
+            for (const id of want.filter((x) => !have.includes(x))) await api('PUT', `/projects/${id}/members/${form.id}`, { preset: v.preset || 'viewer' });
             for (const id of have.filter((x) => !want.includes(x))) await api('DELETE', `/projects/${id}/members/${form.id}`);
             toast('User saved');
           }
           setForm(null); load();
         }} />
+      <AccessEditor visible={!!access} projectId={access && access.access.project_id} projectName={access && (projects.find((x) => x.id === access.access.project_id) || {}).name}
+        member={access && { id: access.user.id, name: access.user.name, permissions: access.access.permissions }} onClose={() => setAccess(null)} onSaved={() => { setAccess(null); load(); }} />
       <Sheet visible={!!secret} title="Temporary password" onClose={() => setSecret(null)}>
         {secret && <View><Text style={{ marginBottom: 8 }}>Give these sign-in details to {secret.name}. This password is shown only once.</Text>
           <Card><Text selectable style={{ fontWeight: '700' }}>{secret.email}</Text><Text selectable style={{ fontSize: 20, fontWeight: '900', color: C.navy, marginTop: 6 }}>{secret.pw}</Text></Card>
@@ -417,7 +447,7 @@ export function Account({ user, onLogout }) {
   return (
     <View>
       <H>My account</H>
-      <Card><Text style={{ fontWeight: '800', fontSize: 16 }}>{user.name}</Text><Muted>{user.email}  ·  {user.role === 'ADMIN' ? 'Administrator' : 'Viewer / Commenter'}</Muted></Card>
+      <Card><Text style={{ fontWeight: '800', fontSize: 16 }}>{user.name}</Text><Muted>{user.email}  ·  {user.role === 'ADMIN' ? 'Administrator' : 'Team member'}</Muted></Card>
       <View style={{ flexDirection: 'row', gap: 10 }}><Btn label="Change password" kind="dark" onPress={() => setOpen(true)} /><Btn label="Sign out" kind="ghost" onPress={onLogout} /></View>
       <FormModal visible={open} title="Change password" onClose={() => setOpen(false)} submitLabel="Change password"
         fields={[{ key: 'current_password', label: 'Current password', secure: true, required: true, autoCapitalize: 'none' }, { key: 'new_password', label: 'New password (8+ characters)', secure: true, required: true, autoCapitalize: 'none' }]}

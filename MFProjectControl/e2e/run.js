@@ -162,7 +162,7 @@ async function chooseFiles(page, buttonName, files) {
   await field(page, 'Full name').fill('Client Viewer'); await field(page, 'Email').fill('viewer@client.test'); await field(page, 'Password').fill('ViewerPass123');
   await page.getByText('Hillcrest Warehouse', { exact: true }).last().click();
   await btn(page, 'Save').click();
-  ok('viewer user created with project access', await visible(page, 'Client Viewer') && await visible(page, 'Projects: Hillcrest Warehouse'));
+  ok('viewer user created with project access', await visible(page, 'Client Viewer') && await visible(page, 'Hillcrest Warehouse') && await visible(page, 'Viewer / Commenter'));
   await shot(page, 'users');
 
   // ---- report PDF (admin) ----
@@ -206,6 +206,59 @@ async function chooseFiles(page, buttonName, files) {
   const vtoken = await page.evaluate(() => localStorage.getItem('mf_token'));
   const r = await page.evaluate(async (t) => (await fetch('/api/projects/1/activities', { method: 'POST', headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'hack', start_date: '2026-01-01' }) })).status, vtoken);
   ok('server rejects viewer write (403)', r === 403);
+  await logout(page);
+
+  // ---- foreman: limited access ----
+  await login(page, 'admin@mf.test', 'AdminPass123');
+  await btn(page, 'Users').click(); await btn(page, '+ Add user').click();
+  await field(page, 'Full name').fill('Site Foreman'); await field(page, 'Email').fill('foreman@mf.test'); await field(page, 'Password').fill('ForemanPass123');
+  await page.getByText('Foreman (site)', { exact: true }).last().click();
+  await page.getByText('Hillcrest Warehouse', { exact: true }).last().click();
+  await btn(page, 'Save').click();
+  ok('foreman created with Foreman preset on the project', await visible(page, 'Site Foreman') && await visible(page, 'Foreman (site)'));
+  await shot(page, 'users-foreman');
+  // open per-project access editor from the Users list
+  await page.getByText('Hillcrest Warehouse', { exact: true }).last().click();
+  ok('access editor lists every section', await visible(page, 'Gantt chart') && await visible(page, 'Update progress %') && await visible(page, 'Site updates'));
+  await shot(page, 'access-editor');
+  await page.getByLabel('Back').click().catch(() => {});
+  await page.reload(); await page.waitForTimeout(800);
+  await logout(page);
+  await login(page, 'foreman@mf.test', 'ForemanPass123');
+  await page.getByText('Hillcrest Warehouse').first().click(); await page.waitForTimeout(500);
+  ok('foreman sees Programme, Site updates, RFIs, Delays, Comments', await visible(page, 'Programme') && (await page.getByText('Site updates', { exact: true }).count()) > 0 && (await page.getByText('RFIs', { exact: true }).count()) > 0);
+  ok('foreman does NOT see Variations / History / Manage tabs', (await page.getByText('Variations', { exact: true }).count()) === 0 && (await page.getByText('History', { exact: true }).count()) === 0 && (await page.getByText('Manage', { exact: true }).count()) === 0);
+  await shot(page, 'foreman-overview');
+  await page.getByText('Programme', { exact: true }).first().click(); await page.waitForTimeout(400);
+  ok('foreman cannot add / edit / reorder activities', (await btn(page, '+ Add activity').count()) === 0 && (await page.getByRole('button', { name: 'Edit', exact: true }).count()) === 0 && (await page.getByLabel('Move down').count()) === 0);
+  await page.getByText('75%', { exact: true }).nth(1).click(); await page.waitForTimeout(800);
+  const ftoken = await page.evaluate(() => localStorage.getItem('mf_token'));
+  const prog = await page.evaluate(async (t) => (await (await fetch('/api/projects/1', { headers: { Authorization: 'Bearer ' + t } })).json()).activities.map((a) => [a.name, a.actual_progress]), ftoken);
+  ok('foreman updated progress from site (quick % buttons) and it saved', prog.some(([n, p]) => n === 'Foundations' && p === 75));
+  const hack = await page.evaluate(async (t) => (await fetch('/api/activities/1', { method: 'PATCH', headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' }, body: JSON.stringify({ finish_date: '2030-01-01' }) })).status, ftoken);
+  ok('server rejects foreman changing dates (403)', hack === 403);
+  ok('foreman can see the Gantt', await page.getByText('Gantt chart', { exact: true }).count() > 0);
+  await page.getByText('Site updates', { exact: true }).first().click();
+  await btn(page, '+ New update').click();
+  await field(page, 'Progress notes').fill('Foreman: slab shutters fixed'); await field(page, 'Labour count').fill('22'); await field(page, 'Work completed').fill('Shutters complete');
+  await chooseFiles(page, 'Choose from gallery', [OUT + '/site1.png']);
+  await btn(page, 'Save').click();
+  ok('foreman added a site update with a photo', await visible(page, 'Saved with 1 photo'));
+  await page.reload(); await page.waitForTimeout(1500); await page.getByText('Site updates', { exact: true }).first().click(); await page.waitForTimeout(800);
+  ok('foreman update persisted; foreman can edit own but not the admin one', await visible(page, 'Foreman: slab shutters fixed') && (await page.getByRole('button', { name: 'Edit', exact: true }).count()) === 1);
+  await shot(page, 'foreman-updates');
+  await logout(page);
+  // admin switches the foreman's Site updates off
+  await login(page, 'admin@mf.test', 'AdminPass123');
+  await page.getByText('Hillcrest Warehouse').first().click(); await page.getByText('Manage', { exact: true }).first().click();
+  await page.getByRole('button', { name: 'Access', exact: true }).nth(1).click();
+  await page.locator('xpath=(//*[normalize-space(text())="Site updates"])[last()]/following::*[normalize-space(text())="No access"][1]').click();
+  await btn(page, 'Save access').click();
+  ok('admin changed access (now Custom)', await visible(page, 'Access saved') && await visible(page, 'Custom'));
+  await logout(page);
+  await login(page, 'foreman@mf.test', 'ForemanPass123'); await page.getByText('Hillcrest Warehouse').first().click(); await page.waitForTimeout(600);
+  ok('foreman no longer sees the Site updates tab', (await page.getByText('Site updates', { exact: true }).count()) === 0 && await visible(page, 'Programme'));
+  await shot(page, 'foreman-restricted');
   await logout(page);
 
   // ---- admin deletes comment, realtime in 2nd context ----

@@ -44,14 +44,29 @@ put HTTPS in front of it. All data (SQLite database and photos) lives in `DATA_D
 ## Tests
 
 ```bash
-cd server && npm test            # 15 API tests: every workflow as Admin and Viewer, permissions, PDF, export, realtime
+cd server && npm test            # 25 API tests: every workflow as Admin and Viewer, per-section access (foreman/client/custom), PDF, export, realtime
 cd e2e && ./fresh.sh && node run.js   # browser test of the real UI (needs the web build + the server)
 ```
 
-## Roles
+## Roles and per-project access
 * **Admin** – everything: projects, programme, progress, RFIs, variations, delays, site updates, photos, comments, reports, users, access.
-* **Viewer / Commenter** – sees only assigned projects; views programme/progress/records, posts comments (with photos) on those projects.
-  Every write is enforced on the server (403), not just hidden in the UI.
+* **Team member** – everyone else. They only see projects they are assigned to, and for **each project** the admin chooses, section by section,
+  what they can do (Users → tap a project under the person, or project → Manage → Access):
+
+  | Section | Levels |
+  |---|---|
+  | Programme (activity list) | No access / View / Update progress % / Full edit |
+  | Gantt chart | No access / View |
+  | Site updates | No access / View / Add & edit own |
+  | Project photos | No access / View / Upload & manage own |
+  | RFIs, Variations, Delays | No access / View / Add / edit |
+  | Comments | No access / View / Can post |
+  | Progress history | No access / View / Take snapshots |
+
+  Quick presets: **Viewer / Commenter**, **Foreman (site)** (update progress %, add site updates + photos, record delays, view Gantt/RFIs, no variations),
+  **Client (limited)** (programme, Gantt, updates, photos, history, comments; no RFIs/variations/delays) – then adjust any section ("Custom").
+  Sections set to *No access* disappear from the app and the server returns nothing for them (including photo URLs). Every check is enforced on the server (403).
+  Users with edit access to site updates / photos can only change the ones they created. Reports, export, audit log, user and project administration stay admin-only.
 
 ## Notes
 * Planned progress is calculated from activity dates (linear between start and finish; milestones are 0 → 100 on their date);

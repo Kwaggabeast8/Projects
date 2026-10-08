@@ -126,8 +126,12 @@ const SU_FIELDS = [
   { key: 'current_work', label: 'Current work', type: 'multiline' }, { key: 'upcoming_work', label: 'Upcoming work', type: 'multiline' },
   { key: 'problems_risks', label: 'Problems / risks', type: 'multiline' }, { key: 'pm_comments', label: 'Project manager comments', type: 'multiline' },
 ];
-export function SiteUpdatesTab({ data, admin, reload, projectId }) {
+export function SiteUpdatesTab({ data, user, pm, reload, projectId }) {
   const { toast } = useUI();
+  const isAdmin = user.role === 'ADMIN';
+  const canAdd = pm.updates === 'edit';
+  const canEditU = (u) => isAdmin || (canAdd && u.created_by === user.id);
+  const canManage = (f) => isAdmin || (canAdd && f.uploaded_by === user.id);
   const [editing, setEditing] = useState(null);
   const [photos, setPhotos] = useState([]);
   const open = (v) => { setPhotos([]); setEditing(v); };
@@ -136,21 +140,21 @@ export function SiteUpdatesTab({ data, admin, reload, projectId }) {
     <View>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <Text style={{ fontSize: 18, fontWeight: '800', color: C.navy }}>Site updates</Text>
-        {admin && <Btn label="+ New update" small onPress={() => open('new')} />}
+        {canAdd && <Btn label="+ New update" small onPress={() => open('new')} />}
       </View>
       {!data.site_updates.length && <Card><Empty text="No site updates recorded." /></Card>}
       {data.site_updates.map((u) => (
         <Card key={u.id}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
             <Text style={{ fontWeight: '800', color: C.navy }}>{fmtDate(u.update_date)}  ·  {cap(u.type)} update</Text>
-            {admin && <Btn label="Edit" kind="dark" small onPress={() => open(u)} />}
+            {canEditU(u) && <Btn label="Edit" kind="dark" small onPress={() => open(u)} />}
           </View>
           <Muted>{u.labour_count} on site{u.created_by_name ? `  ·  by ${u.created_by_name}` : ''}</Muted>
           {sections.map(([k, label]) => !!(u[k] || '').trim() && <Text key={k} style={{ marginTop: 6, color: C.ink }}><Text style={{ fontWeight: '700' }}>{label}: </Text>{u[k]}</Text>)}
-          <PhotoGrid files={u.files} admin={admin} onChanged={reload} />
+          <PhotoGrid files={u.files} canManage={canManage} onChanged={reload} />
         </Card>
       ))}
-      {admin && (
+      {canAdd && (
         <FormModal visible={editing !== null} title={editing === 'new' ? 'New site update' : 'Edit site update'} fields={SU_FIELDS} onClose={() => setEditing(null)}
           initial={editing && editing !== 'new' ? { ...editing, labour_count: String(editing.labour_count) } : { update_date: todayStr(), type: 'DAILY', labour_count: '0' }}
           onDelete={editing && editing !== 'new' ? async () => { await api('DELETE', `/site-updates/${editing.id}`); toast('Site update deleted'); setEditing(null); reload(); } : undefined}
@@ -158,7 +162,7 @@ export function SiteUpdatesTab({ data, admin, reload, projectId }) {
             <View style={{ marginBottom: 14 }}>
               <Text style={{ fontSize: 12.5, fontWeight: '700', color: C.grey, marginBottom: 6 }}>Photos</Text>
               <PhotoPicker value={photos} onChange={setPhotos} />
-              {editing && editing !== 'new' && <PhotoGrid files={editing.files} admin onChanged={() => { reload(); setEditing(null); }} />}
+              {editing && editing !== 'new' && <PhotoGrid files={editing.files} canManage={canManage} onChanged={() => { reload(); setEditing(null); }} />}
             </View>
           )}
           onSubmit={async (v) => {
@@ -174,7 +178,9 @@ export function SiteUpdatesTab({ data, admin, reload, projectId }) {
 }
 
 // ---------- comments ----------
-export function CommentsTab({ data, admin, reload, projectId }) {
+export function CommentsTab({ data, user, pm, reload, projectId }) {
+  const admin = user.role === 'ADMIN';
+  const canPost = pm.comments === 'edit';
   const { toast, confirm } = useUI();
   const [text, setText] = useState('');
   const [photos, setPhotos] = useState([]);
@@ -192,11 +198,11 @@ export function CommentsTab({ data, admin, reload, projectId }) {
   return (
     <View>
       <Text style={{ fontSize: 18, fontWeight: '800', color: C.navy, marginBottom: 10 }}>Comments</Text>
-      <Card>
+      {canPost ? <Card>
         <TextInput value={text} onChangeText={setText} multiline placeholder="Add a comment..." style={[st.input, { minHeight: 80, textAlignVertical: 'top' }]} />
         <View style={{ marginTop: 10 }}><PhotoPicker value={photos} onChange={setPhotos} /></View>
         <View style={{ alignItems: 'flex-end', marginTop: 10 }}><Btn label="Post comment" onPress={post} busy={busy} /></View>
-      </Card>
+      </Card> : <Muted style={{ marginBottom: 10 }}>You can read comments but not post them.</Muted>}
       {!data.comments.length && <Card><Empty text="No comments yet." /></Card>}
       {data.comments.map((c) => (
         <Card key={c.id}>
@@ -205,7 +211,7 @@ export function CommentsTab({ data, admin, reload, projectId }) {
             {admin && <Btn label="Delete" kind="danger" small onPress={async () => { if (await confirm('Delete this comment?', 'The comment and its photos will be removed.')) { try { await api('DELETE', `/comments/${c.id}`); reload(); toast('Comment deleted'); } catch (e) { toast(e.message, 'err'); } } }} />}
           </View>
           <Text style={{ marginTop: 8, color: C.ink }}>{c.body}</Text>
-          <PhotoGrid files={c.files} admin={admin} onChanged={reload} />
+          <PhotoGrid files={c.files} canManage={() => admin} onChanged={reload} />
         </Card>
       ))}
     </View>

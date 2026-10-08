@@ -86,6 +86,7 @@ td input.r{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabul
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-block:14px}
 .stat{border:1px solid var(--line);border-radius:8px;padding:10px 14px}
 .stat .v{font-family:var(--f-display);font-size:24px;font-weight:600}
+.filein{font-size:13px;max-width:100%}.filein::file-selector-button{font:inherit;font-weight:600;background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:8px 14px;margin-right:10px;cursor:pointer}.drop.over{border-color:var(--accent);background:var(--accent-soft)}
 .drop{border:1.5px dashed var(--line);border-radius:8px;padding:14px 16px;background:var(--soft)}
 .gantt{min-width:760px}
 .g-head,.g-row{display:grid;grid-template-columns:210px 1fr;align-items:center}
@@ -557,8 +558,8 @@ function tabBOQ(P,c){
   <h2 style="margin-top:22px">Bill of quantities</h2>
   <p class="hint">Bring in your BOQ from Excel or CSV, or paste the table. PDFs, Word files and photos are read with text recognition, so check every quantity and rate before importing. Each line is placed in a work section and a supplier category, which builds the programme and the supplier search. Check them and change any that are wrong.</p>
   <div class="drop"><div class="row" style="align-items:center">
-   <label class="btn primary" for="boqfile">Choose BOQ file</label><input id="boqfile" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsm,.pdf,.docx,.jpg,.jpeg,.png,.webp" style="position:absolute;opacity:0;width:1px;height:1px">
-   <span class="small muted">Excel, CSV, PDF, Word, or a photo of a printed BOQ. The file is read on your device and not uploaded.</span></div>
+   <input id="boqfile" class="filein" type="file" aria-label="Choose a BOQ file">
+   <span class="small muted">Choose a file or drop it here: Excel, CSV, PDF, Word, or a photo of a printed BOQ. It is read on your device and not uploaded.</span></div>
    ${ui.impBusy?`<p class="small" style="margin:10px 0 0;color:var(--accent)">${esc(ui.impBusy)}</p>`:''}
    ${ui.impMsg?`<p class="small neg" style="margin:10px 0 0">${esc(ui.impMsg)}</p>`:''}
    <details style="margin:8px 0 0"><summary style="font-size:15px;margin-block:8px">Or paste a table</summary>
@@ -687,7 +688,7 @@ function tabPri(P,c){
   <p class="hint">Upload or paste a supplier's price list (description and price). The app matches lines to your BOQ and fills in that supplier's prices.</p>
   <div class="drop"><div class="row" style="align-items:flex-end">
    <label class="field" style="min-width:220px">Supplier${sel('id="pimpsup" data-ui="pimpSup"',store.suppliers.map(s=>[s.id,s.name]),ui.pimpSup||(store.suppliers[0]&&store.suppliers[0].id))}</label>
-   <label class="btn ${pro()?'primary':''}" for="pricefile">Choose price list</label><input id="pricefile" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" style="position:absolute;opacity:0;width:1px;height:1px">
+   <input id="pricefile" class="filein" type="file" aria-label="Choose a price list">
    <button class="btn" data-act="pimpPaste" type="button">Read pasted list</button></div>
    <textarea id="pricepaste" rows="3" style="width:100%;margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px;font-family:var(--f-mono);font-size:12.5px;color:var(--ink)" placeholder="Clay stock bricks, 3.60&#10;Cement 50kg bag, 112.50"></textarea>
    ${ui.pimpMsg?`<p class="small neg" style="margin:8px 0 0">${esc(ui.pimpMsg)}</p>`:''}</div>
@@ -954,6 +955,11 @@ document.addEventListener('click',e=>{
   }
 });
 
+document.addEventListener('dragover',e=>{const d=e.target.closest&&e.target.closest('.drop');if(d){e.preventDefault();d.classList.add('over')}});
+document.addEventListener('dragleave',e=>{const d=e.target.closest&&e.target.closest('.drop');if(d)d.classList.remove('over')});
+document.addEventListener('drop',e=>{const d=e.target.closest&&e.target.closest('.drop');if(!d)return;e.preventDefault();d.classList.remove('over');const f=e.dataTransfer&&e.dataTransfer.files[0];if(f){if(d.querySelector('#pricefile'))handlePriceFile(f);else handleBOQFile(f)}});
+window.addEventListener('error',e=>{ui.impBusy='';ui.impMsg='Something went wrong: '+(e.message||'unknown error');try{render()}catch(x){}});
+window.addEventListener('unhandledrejection',e=>{ui.impBusy='';ui.impMsg='Something went wrong: '+((e.reason&&e.reason.message)||'the file could not be read');try{render()}catch(x){}});
 initStore();
 render();
 if(cloudOn()&&sess){afterLogin().then(()=>{if(/[?&]paid=1/.test(location.search)){ui.view='plans';ui.accMsg='Thanks. Your plan updates as soon as PayFast confirms the payment. Press Refresh my plan if it still shows Free.'}render()}).catch(()=>{})}

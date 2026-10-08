@@ -562,8 +562,8 @@ function tabBOQ(P,c){
    <span class="small muted">Choose a file or drop it here: Excel, CSV, PDF, Word, or a photo of a printed BOQ. It is read on your device and not uploaded.</span></div>
    ${ui.impBusy?`<p class="small" style="margin:10px 0 0;color:var(--accent)">${esc(ui.impBusy)}</p>`:''}
    ${ui.impMsg?`<p class="small neg" style="margin:10px 0 0">${esc(ui.impMsg)}</p>`:''}
-   <details style="margin:8px 0 0"><summary style="font-size:15px;margin-block:8px">Or paste a table</summary>
-   <textarea id="pastebox" rows="5" style="width:100%;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px;font-family:var(--f-mono);font-size:12.5px;color:var(--ink)" placeholder="Description, Unit, Qty, Rate&#10;Excavate trenches, m3, 42, 185"></textarea>
+   <details open style="margin:8px 0 0"><summary style="font-size:15px;margin-block:8px">If choosing a file does not work, paste the table here</summary>
+   <textarea id="pastebox" rows="5" style="width:100%;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px;font-family:var(--f-mono);font-size:12.5px;color:var(--ink)" placeholder="Copy the BOQ rows from Excel or your document and paste them here. Columns: Description, Unit, Qty, Rate"></textarea>
    <button class="btn" data-act="impPaste" type="button" style="margin-top:8px">Read pasted table</button></details></div>
   ${impHtml}
   <div class="row" style="margin-block:18px 10px;justify-content:space-between;align-items:center"><h3>${P.items.length} lines</h3><div class="row"><button class="btn" data-act="addItem" type="button">Add a line</button></div></div>

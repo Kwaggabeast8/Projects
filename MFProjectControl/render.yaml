@@ -1,0 +1,19 @@
+# Render.com blueprint: New + > Blueprint > pick this repo. Needs a paid instance because of the persistent disk.
+services:
+  - type: web
+    name: mf-project-control
+    runtime: docker
+    rootDir: MFProjectControl
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: ADMIN_EMAIL
+        sync: false          # you type this in when creating the service
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: DATA_DIR
+        value: /data
+    disk:
+      name: mf-data          # database + uploaded photos live here
+      mountPath: /data
+      sizeGB: 5

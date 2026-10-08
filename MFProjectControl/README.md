@@ -48,6 +48,13 @@ the admin creates every other account under **Users**.
 * **Native app:** `cd app && npx expo start`, open in Expo Go, and enter the server address on the sign-in screen
   (or set `EXPO_PUBLIC_API_URL`). The server must be reachable from the phone (deploy it, or use your LAN address).
 
+### Put it online (one-click)
+A `Dockerfile` and `render.yaml` are included.
+* **Render.com:** New + → *Blueprint* → pick the `Kwaggabeast8/Projects` repo and branch `claude/mf-project-control-finish-nzx4rw` → enter `ADMIN_EMAIL` and `ADMIN_PASSWORD` when asked → Deploy.
+  You get an `https://….onrender.com` link for phones and computers. A 5 GB persistent disk (mounted at `/data`) holds the database and photos.
+* **Any other host** (Railway, Fly.io, a VPS): build the `Dockerfile`, mount a persistent volume at `/data`, set `ADMIN_EMAIL` / `ADMIN_PASSWORD`, expose port `10000`.
+* For the phone app (Expo Go), enter that https address on the sign-in screen.
+
 ### Deploying ("cloud database")
 Run the server on any host with a persistent disk (Railway, Render, Fly.io, a VPS …), point `DATA_DIR` at that disk and
 put HTTPS in front of it. All data (SQLite database and photos) lives in `DATA_DIR`; back it up with

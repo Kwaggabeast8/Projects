@@ -1,0 +1,6 @@
+**/node_modules
+app/dist
+app/.expo
+server/data
+e2e
+.git

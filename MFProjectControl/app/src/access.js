@@ -40,7 +40,7 @@ export function AccessEditor({ visible, projectId, projectName, member, onClose,
       <Text style={st.label}>Quick setup</Text>
       <Chips value={current} onChange={(k) => k !== 'custom' && setPerms({ ...meta.presets[k].permissions })}
         options={[...Object.entries(meta.presets).map(([value, p]) => ({ value, label: p.label })), { value: 'custom', label: 'Custom' }]} />
-      <Muted style={{ marginTop: 6, marginBottom: 14, fontSize: 12 }}>Pick a starting point, then adjust any section below.</Muted>
+      <Muted style={{ marginTop: 8, marginBottom: 14, fontSize: 13 }}>{current === 'custom' ? 'Custom mix - set each section below.' : meta.presets[current].summary}</Muted>
       {meta.sections.map((s) => (
         <View key={s.key} style={{ marginBottom: 14 }}>
           <Text style={{ fontWeight: '800', color: C.navy, marginBottom: 6 }}>{s.label}</Text>

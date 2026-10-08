@@ -374,7 +374,7 @@ function createApp() {
   });
 
   // sections / presets for the access editor
-  app.get('/api/access-meta', auth(), (req, res) => res.json({ sections: perms.SECTIONS, presets: Object.fromEntries(Object.keys(perms.PRESETS).map((k) => [k, { label: perms.PRESETS[k].label, permissions: perms.preset(k) }])) }));
+  app.get('/api/access-meta', auth(), (req, res) => res.json({ sections: perms.SECTIONS, presets: Object.fromEntries(Object.keys(perms.PRESETS).map((k) => [k, { label: perms.PRESETS[k].label, summary: perms.SUMMARY[k], permissions: perms.preset(k) }])) }));
 
   // --- users (admin) ---
   const userRow = (u) => ({

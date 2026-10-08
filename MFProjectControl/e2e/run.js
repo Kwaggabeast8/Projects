@@ -226,6 +226,7 @@ async function chooseFiles(page, buttonName, files) {
   await logout(page);
   await login(page, 'foreman@mf.test', 'ForemanPass123');
   await page.getByText('Hillcrest Warehouse').first().click(); await page.waitForTimeout(500);
+  ok('foreman lands straight on Site updates with a New update button', await visible(page, '+ New update'));
   ok('foreman sees Programme, Site updates, RFIs, Delays, Comments', await visible(page, 'Programme') && (await page.getByText('Site updates', { exact: true }).count()) > 0 && (await page.getByText('RFIs', { exact: true }).count()) > 0);
   ok('foreman does NOT see Variations / History / Manage tabs', (await page.getByText('Variations', { exact: true }).count()) === 0 && (await page.getByText('History', { exact: true }).count()) === 0 && (await page.getByText('Manage', { exact: true }).count()) === 0);
   await shot(page, 'foreman-overview');

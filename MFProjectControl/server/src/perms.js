@@ -25,6 +25,12 @@ const PRESETS = {
   client: { label: 'Client (limited)', programme: 'view', gantt: 'view', updates: 'view', photos: 'view', rfis: 'none', variations: 'none', delays: 'none', comments: 'edit', history: 'view' },
 };
 
+const SUMMARY = {
+  viewer: 'Can look at everything on the project (programme, Gantt, site updates, photos, RFIs, variations, delays, history) and post comments. Cannot change anything else.',
+  foreman: 'Opens straight into Site updates: sees all updates and can fill in their own with photos on site. Can also update activity progress %, record delays and comment. Can view the Gantt and RFIs. Cannot see variations or change dates.',
+  manager: 'Broad edit rights: programme and Gantt, everyone\'s site updates, photos, comments and snapshots, plus RFIs, variations and delays. Cannot manage users, reports or backups.',
+  client: 'For the client: programme, Gantt, site updates, photos and history to look at, and can comment. No RFIs, variations or delays.',
+};
 const ALL = Object.fromEntries(KEYS.map((k) => [k, SECTIONS.find((s) => s.key === k).levels.slice(-1)[0]]));
 
 function normalize(input) {
@@ -50,4 +56,4 @@ function fromBody(body) {
 }
 const has = (perms, section, need) => (RANK[perms[section]] || 0) >= RANK[need];
 
-module.exports = { SECTIONS, PRESETS, ALL, normalize, preset, presetOf, parse, fromBody, has };
+module.exports = { SUMMARY, SECTIONS, PRESETS, ALL, normalize, preset, presetOf, parse, fromBody, has };

@@ -57,8 +57,8 @@ function Shell() {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <Header user={user} title={nav.screen === 'users' ? 'Users' : nav.screen === 'account' ? 'My account' : undefined} onBack={nav.screen !== 'projects' ? home : undefined} onHome={home} onUsers={goUsers} onAccount={goAccount} />
       <Page>
-        {nav.screen === 'projects' && <Projects user={user} rt={rt} onOpen={(id) => setNav({ screen: 'project', projectId: id, tab: 'overview' })} />}
-        {nav.screen === 'project' && <ProjectScreen key={projectId} user={user} projectId={projectId} tab={nav.tab || 'overview'} rt={rt} setTab={(tab) => setNav({ ...nav, tab })} onBack={home} />}
+        {nav.screen === 'projects' && <Projects user={user} rt={rt} onOpen={(id) => setNav({ screen: 'project', projectId: id })} />}
+        {nav.screen === 'project' && <ProjectScreen key={projectId} user={user} projectId={projectId} tab={nav.tab} rt={rt} setTab={(tab) => setNav({ ...nav, tab })} onBack={home} />}
         {nav.screen === 'users' && user.role === 'ADMIN' && <Users me={user} />}
         {nav.screen === 'account' && <Account user={user} onLogout={logout} />}
       </Page>

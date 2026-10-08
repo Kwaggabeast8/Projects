@@ -160,7 +160,9 @@ export function ProjectScreen({ user, projectId, tab, setTab, rt, onBack }) {
   const visibleTab = { overview: true, programme: v('programme') || v('gantt'), updates: v('updates'), rfis: v('rfis'), variations: v('variations'), delays: v('delays'), comments: v('comments'), history: v('history'), manage: admin };
   const tabs = TABS.filter(([k]) => visibleTab[k]);
   const props = { data, admin, user, pm, reload: load, projectId };
-  const cur = visibleTab[tab] ? tab : 'overview';
+  // people who fill in site updates on site (not full programme editors) land straight on Site updates
+  const siteUser = !admin && (pm.updates === 'edit' || pm.updates === 'all') && pm.programme !== 'edit';
+  const cur = tab && visibleTab[tab] ? tab : siteUser ? 'updates' : 'overview';
   return (
     <View>
       <View style={{ marginBottom: 8 }}>
@@ -415,6 +417,7 @@ export function Users({ me }) {
         </Card>
       ))}
       <FormModal visible={form !== null} title={form === 'new' ? 'Add user' : 'Edit user'} fields={fields} onClose={() => setForm(null)}
+        extra={(v) => (v.role !== 'ADMIN' && meta && meta.presets[v.preset] ? <View style={{ backgroundColor: C.light, borderRadius: 8, padding: 10, marginBottom: 14 }}><Text style={{ fontWeight: '800', color: C.navy, marginBottom: 2 }}>{meta.presets[v.preset].label}</Text><Muted>{meta.presets[v.preset].summary}</Muted></View> : null)}
         initial={form && form !== 'new' ? { ...form, password: '', active: !!form.active, preset: 'viewer' } : { role: 'VIEWER', project_ids: [], preset: 'viewer' }}
         onSubmit={async (v) => {
           if (form === 'new') {
